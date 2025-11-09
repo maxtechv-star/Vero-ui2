@@ -1,0 +1,25 @@
+{
+  "name": "Veron Api'S Base",
+  "version": "1.0.0",
+  "description": "just simple base.",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "author": "verondev",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.8",
+    "chalk": "^4.1.2",
+    "cheerio": "^1.1.2",
+    "consola": "^3.4.2",
+    "ejs": "^3.1.10",
+    "express": "^4.19.2",
+    "file-type": "^16.5.4",
+    "multer": "^2.0.2",
+    "user-agents": "^1.1.669",
+    "uuid": "^13.0.0",
+    "ws": "^8.18.3"
+  }
+}
