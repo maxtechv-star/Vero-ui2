@@ -4,17 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="<%= description %>">
-  <meta name="theme-color" content="#8b5cf6">
+  <meta name="theme-color" content="#1e1b2e">
   <title><%= title %></title>
 
   <link rel="icon" href="/favicon.ico" type="image/x-icon">
 
-  <!-- Set theme before paint (anti-flicker) -->
+  <!-- Force dark mode by default -->
   <script>
     (function () {
-      const t = localStorage.getItem('theme');
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      if (t === 'dark' || (!t && prefersDark)) document.documentElement.classList.add('dark');
+      // Always start with dark mode for eye protection
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
     })();
   </script>
 
@@ -30,11 +30,18 @@
             mono: ['Ubuntu Mono','ui-monospace','SFMono-Regular']
           },
           colors: {
-            brand: { 
-              300: '#c4b5fd',  // purple-300
-              400: '#a78bfa',  // purple-400  
-              500: '#8b5cf6',  // purple-500
-              600: '#6366f1'   // indigo-500
+            // Dark mode optimized colors
+            dark: {
+              100: '#2d2a3e',
+              200: '#252336',
+              300: '#1e1b2e',
+              400: '#171525',
+              500: '#100f1c'
+            },
+            purple: {
+              150: '#a78bfa', // Softer purple for dark mode
+              250: '#8b5cf6',
+              350: '#7c3aed'
             }
           },
           keyframes: {
@@ -51,8 +58,8 @@
               '50%': { transform: 'translateY(-5px)' }
             },
             glow: {
-              '0%, 100%': { boxShadow: '0 0 20px -5px rgba(139, 92, 246, 0.5)' },
-              '50%': { boxShadow: '0 0 30px -3px rgba(139, 92, 246, 0.8)' }
+              '0%, 100%': { boxShadow: '0 0 20px -5px rgba(139, 92, 246, 0.3)' },
+              '50%': { boxShadow: '0 0 30px -3px rgba(139, 92, 246, 0.5)' }
             }
           },
           animation: {
@@ -62,9 +69,7 @@
             glow: 'glow 2s ease-in-out infinite'
           },
           backgroundImage: {
-            'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-            'gradient-conic': 'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
-            'radial-soft': 'radial-gradient(1100px 600px at 10% -10%, rgba(139, 92, 246, .15), transparent 60%), radial-gradient(900px 500px at 90% 10%, rgba(59, 130, 246, .15), transparent 60%)'
+            'dark-gradient': 'radial-gradient(1100px 600px at 10% -10%, rgba(139, 92, 246, .08), transparent 60%), radial-gradient(900px 500px at 90% 10%, rgba(59, 130, 246, .08), transparent 60%)'
           }
         }
       }
@@ -76,7 +81,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Ubuntu+Mono:wght@400;700&display=swap" rel="stylesheet">
 
   <style>
-    /* Purple to Blue Gradient button */
+    /* Dark mode optimized gradient button */
     .gbtn {
       display: inline-flex;
       align-items: center;
@@ -84,14 +89,15 @@
       padding: .65rem 1.25rem;
       border-radius: 0.75rem;
       color: #fff;
-      font-weight: 800;
+      font-weight: 700;
       font-size: .75rem;
       letter-spacing: .02em;
-      background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 50%, #3b82f6 100%);
-      box-shadow: 0 12px 28px rgba(139, 92, 246, 0.35);
+      background: linear-gradient(135deg, #7c3aed 0%, #6366f1 50%, #3b82f6 100%);
+      box-shadow: 0 8px 25px rgba(139, 92, 246, 0.25);
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       position: relative;
       overflow: hidden;
+      border: 1px solid rgba(139, 92, 246, 0.2);
     }
 
     .gbtn::before {
@@ -101,7 +107,7 @@
       left: -100%;
       width: 100%;
       height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
       transition: left 0.5s;
     }
 
@@ -111,24 +117,24 @@
 
     .gbtn:hover {
       transform: translateY(-2px);
-      box-shadow: 0 20px 40px rgba(139, 92, 246, 0.4);
+      box-shadow: 0 15px 35px rgba(139, 92, 246, 0.35);
     }
 
     .gbtn:active {
       transform: translateY(0);
     }
 
-    /* Glass morphism effect */
-    .glass {
-      background: rgba(255, 255, 255, 0.25);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.18);
+    /* Dark glass morphism effect */
+    .dark-glass {
+      background: rgba(30, 27, 46, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(139, 92, 246, 0.15);
     }
 
-    .glass-dark {
-      background: rgba(15, 23, 42, 0.25);
+    .dark-glass-light {
+      background: rgba(45, 42, 62, 0.6);
       backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(139, 92, 246, 0.1);
     }
 
     /* Expand panel animations */
@@ -162,58 +168,60 @@
       }
     }
 
-    /* Custom scrollbar */
+    /* Custom scrollbar for dark mode */
     ::-webkit-scrollbar {
       width: 6px;
     }
 
     ::-webkit-scrollbar-track {
-      background: rgba(139, 92, 246, 0.1);
+      background: rgba(30, 27, 46, 0.8);
       border-radius: 10px;
     }
 
     ::-webkit-scrollbar-thumb {
-      background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+      background: linear-gradient(135deg, #7c3aed, #3b82f6);
       border-radius: 10px;
     }
 
     ::-webkit-scrollbar-thumb:hover {
-      background: linear-gradient(135deg, #7c3aed, #2563eb);
+      background: linear-gradient(135deg, #6d28d9, #2563eb);
     }
 
-    /* Gradient text */
+    /* Gradient text optimized for dark background */
     .gradient-text {
-      background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+      background: linear-gradient(135deg, #a78bfa, #60a5fa);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
     }
+
+    /* Eye-friendly text colors */
+    .text-eye-safe {
+      color: #e2e8f0; /* Softer white */
+    }
+
+    .text-eye-muted {
+      color: #94a3b8; /* Muted gray-blue */
+    }
   </style>
 </head>
 
-<body class="min-h-dvh bg-gradient-to-br from-slate-50 via-purple-50/30 to-blue-50/30 bg-radial-soft text-slate-900 antialiased
-             dark:bg-gradient-to-br dark:from-slate-900 dark:via-purple-900/10 dark:to-blue-900/10 dark:text-slate-100">
-  <!-- Animated background elements -->
-  <div class="fixed top-10 left-10 w-20 h-20 bg-purple-400/10 rounded-full blur-xl animate-float"></div>
-  <div class="fixed top-1/3 right-20 w-16 h-16 bg-blue-400/10 rounded-full blur-xl animate-float" style="animation-delay: 1s;"></div>
-  <div class="fixed bottom-20 left-1/3 w-24 h-24 bg-indigo-400/10 rounded-full blur-xl animate-float" style="animation-delay: 2s;"></div>
+<body class="min-h-dvh bg-dark-400 bg-dark-gradient text-eye-safe antialiased">
+  <!-- Animated background elements - subtle for dark mode -->
+  <div class="fixed top-10 left-10 w-20 h-20 bg-purple-350/5 rounded-full blur-xl animate-float"></div>
+  <div class="fixed top-1/3 right-20 w-16 h-16 bg-blue-400/5 rounded-full blur-xl animate-float" style="animation-delay: 1s;"></div>
+  <div class="fixed bottom-20 left-1/3 w-24 h-24 bg-indigo-400/5 rounded-full blur-xl animate-float" style="animation-delay: 2s;"></div>
 
-  <!-- Theme Toggle -->
-  <button id="themeToggle" class="fixed right-4 top-4 z-50 gbtn animate-glow" aria-label="Toggle theme">
+  <!-- Theme Toggle - Only dark mode -->
+  <button id="themeToggle" class="fixed right-4 top-4 z-50 gbtn animate-glow" aria-label="Dark Mode" title="Dark Mode Only - Eye Protection">
     <span class="material-icons-outlined text-[18px]" id="themeIcon">dark_mode</span>
-    <span class="hidden sm:inline">Theme</span>
+    <span class="hidden sm:inline">Dark Mode</span>
   </button>
   <script>
-    const btnTheme = document.getElementById('themeToggle');
-    const iconTheme = document.getElementById('themeIcon');
-    function syncThemeIcon() { 
-      iconTheme.textContent = document.documentElement.classList.contains('dark') ? 'light_mode' : 'dark_mode'; 
-    }
-    syncThemeIcon();
-    btnTheme.addEventListener('click', () => {
-      const dark = document.documentElement.classList.toggle('dark');
-      localStorage.setItem('theme', dark ? 'dark' : 'light');
-      syncThemeIcon();
+    // Remove theme toggle functionality, only dark mode
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      // Show a tooltip or simply do nothing
+      console.log('Dark mode is always enabled for eye protection');
     });
   </script>
 
