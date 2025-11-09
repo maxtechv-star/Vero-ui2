@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -12,9 +13,20 @@
   <!-- Set theme before paint (anti-flicker) -->
   <script>
     (function () {
-      const t = localStorage.getItem('theme');
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      if (t === 'dark' || (!t && prefersDark)) document.documentElement.classList.add('dark');
+      try {
+        const t = localStorage.getItem('theme');
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const isDark = t === 'dark' || (t === null && prefersDark);
+        if (isDark) {
+          document.documentElement.classList.add('dark');
+          try { document.documentElement.style.colorScheme = 'dark'; } catch (e) {}
+        } else {
+          document.documentElement.classList.remove('dark');
+          try { document.documentElement.style.colorScheme = 'light'; } catch (e) {}
+        }
+      } catch (e) {
+        /* fail silently so page can still render */
+      }
     })();
   </script>
 
@@ -198,21 +210,30 @@
   <div class="fixed bottom-20 left-1/3 w-24 h-24 bg-indigo-400/10 rounded-full blur-xl animate-float dark:bg-indigo-400/5" style="animation-delay: 2s;"></div>
 
   <!-- Theme Toggle -->
-  <button id="themeToggle" class="fixed right-4 top-4 z-50 gbtn animate-glow" aria-label="Toggle theme">
+  <button id="themeToggle" class="fixed right-4 top-4 z-50 gbtn animate-glow" aria-label="Toggle theme" aria-pressed="false">
     <span class="material-icons-outlined text-[18px]" id="themeIcon">dark_mode</span>
     <span class="hidden sm:inline">Theme</span>
   </button>
   <script>
-    const btnTheme = document.getElementById('themeToggle');
-    const iconTheme = document.getElementById('themeIcon');
-    function syncThemeIcon() { 
-      iconTheme.textContent = document.documentElement.classList.contains('dark') ? 'light_mode' : 'dark_mode'; 
-    }
-    syncThemeIcon();
-    btnTheme.addEventListener('click', () => {
-      const dark = document.documentElement.classList.toggle('dark');
-      localStorage.setItem('theme', dark ? 'dark' : 'light');
+    // wait for DOM to be ready so button exists, but initial anti-flicker has already run above
+    document.addEventListener('DOMContentLoaded', function () {
+      const btnTheme = document.getElementById('themeToggle');
+      const iconTheme = document.getElementById('themeIcon');
+
+      function syncThemeIcon() {
+        const isDark = document.documentElement.classList.contains('dark');
+        iconTheme.textContent = isDark ? 'light_mode' : 'dark_mode';
+        btnTheme.setAttribute('aria-pressed', isDark ? 'true' : 'false');
+      }
+
       syncThemeIcon();
+
+      btnTheme.addEventListener('click', () => {
+        const dark = document.documentElement.classList.toggle('dark');
+        try { document.documentElement.style.colorScheme = dark ? 'dark' : 'light'; } catch (e) {}
+        localStorage.setItem('theme', dark ? 'dark' : 'light');
+        syncThemeIcon();
+      });
     });
   </script>
 
