@@ -1,4 +1,6 @@
 
+const axios = require('axios');
+
 const yt = {
     get url() {
         return {
@@ -36,16 +38,12 @@ const yt = {
     getInitUrl: async function () {
         try {
             // First request to get the main page
-            const r1 = await fetch(this.url.origin, { 
+            const r1 = await axios.get(this.url.origin, { 
                 headers: this.baseHeaders,
-                redirect: 'follow'
+                timeout: 10000
             })
             
-            if (!r1.ok) {
-                throw new Error(`Failed to fetch main page: ${r1.status} ${r1.statusText}`)
-            }
-            
-            const html = await r1.text()
+            const html = r1.data
             
             // Extract JavaScript file path
             const jsPathMatch = html.match(/<script src="(\/js\/app\.[^"]+\.js)"/)
@@ -57,18 +55,15 @@ const yt = {
             const jsUrl = this.url.origin + jsPath
             
             // Fetch the JavaScript file
-            const r2 = await fetch(jsUrl, { 
+            const r2 = await axios.get(jsUrl, { 
                 headers: {
                     ...this.baseHeaders,
                     'Referer': this.url.origin
-                }
+                },
+                timeout: 10000
             })
             
-            if (!r2.ok) {
-                throw new Error(`Failed to fetch JS file: ${r2.status} ${r2.statusText}`)
-            }
-            
-            const js = await r2.text()
+            const js = r2.data
             
             // Try to find API URL in JavaScript
             const apiUrlMatches = js.match(/convertURL:"([^"]+)"/)
@@ -106,12 +101,9 @@ const yt = {
             console.log('Found API URL:', initApi)
             
             // First request to initialize conversion
-            const r1 = await fetch(initApi, { headers })
-            if (!r1.ok) {
-                throw new Error(`API request failed: ${r1.status} ${r1.statusText}`)
-            }
+            const r1 = await axios.get(initApi, { headers, timeout: 15000 })
+            const j1 = r1.data
             
-            const j1 = await r1.json()
             const { convertURL } = j1
             
             if (!convertURL) {
@@ -122,12 +114,8 @@ const yt = {
             const convertApi = `${convertURL}&v=${v}&f=${f}&_=${Date.now()}`
             console.log('Conversion URL:', convertApi)
             
-            const r2 = await fetch(convertApi, { headers })
-            if (!r2.ok) {
-                throw new Error(`Conversion request failed: ${r2.status} ${r2.statusText}`)
-            }
-            
-            const j2 = await r2.json()
+            const r2 = await axios.get(convertApi, { headers, timeout: 15000 })
+            const j2 = r2.data
             
             if (j2.error) {
                 throw new Error(`API Error: ${j2.error}`)
@@ -135,8 +123,8 @@ const yt = {
             
             if (j2.redirectURL) {
                 // Direct download available
-                const r3 = await fetch(j2.redirectURL, { headers })
-                const j3 = await r3.json()
+                const r3 = await axios.get(j2.redirectURL, { headers, timeout: 15000 })
+                const j3 = r3.data
                 
                 return {
                     title: j3.title || 'Unknown Title',
@@ -152,8 +140,8 @@ const yt = {
                 const maxAttempts = 15 // Increased attempts
                 
                 while (attempts < maxAttempts) {
-                    const r3 = await fetch(j2.progressURL, { headers })
-                    const progressData = await r3.json()
+                    const r3 = await axios.get(j2.progressURL, { headers, timeout: 15000 })
+                    const progressData = r3.data
                     
                     if (progressData.error) {
                         throw new Error(`Progress error: ${progressData.error}`)
@@ -181,6 +169,9 @@ const yt = {
             
         } catch (error) {
             console.error('Download error:', error.message)
+            if (error.code === 'ECONNABORTED') {
+                throw new Error('Request timeout - service might be busy')
+            }
             throw error
         }
     }
@@ -227,13 +218,13 @@ handler.category = 'Downloader';
 handler.status = 'working';
 handler.params = {
     url: { 
-        desc: 'YouTube video URL', 
+        desc: 'YouTube video URL (YouTube.com or youtu.be)', 
         example: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
         required: true,
         type: 'string'
     },
     format: { 
-        desc: 'Output format', 
+        desc: 'Output format - mp3 for audio, mp4 for video', 
         options: ['mp3', 'mp4'],
         required: false,
         type: 'string',
