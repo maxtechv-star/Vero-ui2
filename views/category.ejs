@@ -1,0 +1,539 @@
+<%- include('partials/header', {
+  title: `${categoryName} - ${name}`,
+  description: categoryDesc
+}) %>
+
+<!-- Header -->
+<div class="flex flex-col text-left mb-8">
+  <a href="/" class="inline-flex items-center text-sm text-slate-600 dark:text-slate-300 hover:text-purple-600 dark:hover:text-purple-300 mb-4 transition-colors group">
+    <span class="material-icons-outlined mr-2 group-hover:-translate-x-1 transition-transform">arrow_back</span> 
+    Back to Categories
+  </a>
+
+  <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+    <div class="flex-grow">
+      <h2 class="flex flex-wrap items-center gap-3 text-3xl font-bold mb-2">
+        <span class="flex-grow gradient-text"><%= categoryName %></span>
+        <span class="inline-flex items-center rounded-2xl px-4 py-2 text-xs font-extrabold text-white
+                     bg-gradient-to-r from-purple-500 via-indigo-500 to-blue-600 shadow-lg animate-glow">
+          <%= category.items.length %> Endpoints
+        </span>
+      </h2>
+      <p class="text-slate-600 dark:text-slate-300 text-sm leading-relaxed max-w-2xl"><%= categoryDesc %></p>
+    </div>
+  </div>
+</div>
+
+<!-- Search -->
+<div class="flex items-center justify-between mb-6">
+  <div class="flex-1 relative">
+    <span class="material-icons-outlined absolute left-4 top-3.5 text-purple-500">search</span>
+    <input id="searchInput" type="text" placeholder="Search endpoints by name or path..."
+      class="w-full rounded-2xl border-purple-200 dark:border-purple-800
+             glass dark:glass-dark text-slate-900 dark:text-slate-100
+             placeholder-slate-400 dark:placeholder-slate-500
+             pl-12 pr-4 py-4 text-sm outline-none focus:ring-2 focus:ring-purple-300 transition-all shadow-lg" />
+    <div class="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-r from-transparent via-white/30 to-transparent
+                bg-[length:200%_100%] animate-shimmer dark:via-white/10"></div>
+  </div>
+</div>
+
+<div id="content">
+  <div id="noResults" class="rounded-2xl glass dark:glass-dark p-12 text-center shadow-lg hidden">
+    <div class="w-16 h-16 rounded-2xl bg-gradient-to-r from-purple-500 to-blue-600 flex items-center justify-center mx-auto mb-4">
+      <span class="material-icons-outlined text-white">search_off</span>
+    </div>
+    <h3 class="text-lg font-semibold text-slate-700 dark:text-slate-300 mb-2">No results found</h3>
+    <p class="text-sm text-slate-500 dark:text-slate-400">Try adjusting your search terms</p>
+  </div>
+
+  <div id="apiList" class="space-y-4">
+    <% category.items.forEach((endpoint, endpointIndex) => { %>
+      <div
+        class="rounded-2xl glass dark:glass-dark p-5 shadow-lg hover:shadow-xl transition-all duration-300 api-item group"
+        data-method="<%= endpoint.method %>"
+        data-path="<%= endpoint.path %>"
+        data-alias="<%= endpoint.alias %>">
+
+        <!-- Row -->
+        <button onclick="toggleEndpoint(<%= endpointIndex %>)" class="w-full text-left flex items-center justify-between group">
+          <div class="flex items-center min-w-0 flex-1 gap-4">
+            <span class="px-4 py-2 text-xs font-extrabold text-white rounded-xl shadow-lg
+                         bg-gradient-to-r from-purple-500 via-indigo-500 to-blue-600 transition-transform group-hover:scale-105">
+              <%= endpoint.method %>
+            </span>
+            <div class="flex flex-col min-w-0 flex-1">
+              <span class="font-bold truncate max-w-[90%] font-mono text-base group-hover:text-purple-600 dark:group-hover:text-purple-300 transition-colors" 
+                    title="<%= endpoint.path %>"><%= endpoint.path %></span>
+              <span class="text-sm text-slate-500 dark:text-slate-400 truncate max-w-[90%] mt-1" 
+                    title="<%= endpoint.alias %>"><%= endpoint.alias %></span>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <% if (endpoint.status === 'error') { %>
+              <span class="material-icons-outlined text-red-500 animate-pulse" title="Endpoint Error">error</span>
+            <% } else if (endpoint.status === 'maintenance') { %>
+              <span class="material-icons-outlined text-yellow-500" title="Under Maintenance">warning</span>
+            <% } %>
+            <span class="material-icons-outlined text-purple-500 transition-transform duration-300 group-hover:rotate-180" 
+                  id="endpoint-icon-<%= endpointIndex %>">expand_more</span>
+          </div>
+        </button>
+
+        <!-- Panel -->
+        <div id="endpoint-<%= endpointIndex %>" class="hidden mt-4 p-5 rounded-2xl bg-slate-50/70 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 shadow-inner">
+
+          <% if (endpoint.status === 'error') { %>
+            <div class="rounded-xl border border-red-200 bg-red-50/80 p-4 mb-4 dark:border-red-500/40 dark:bg-red-100/10">
+              <div class="flex items-start">
+                <span class="material-icons-outlined text-red-500 text-sm mr-3 mt-0.5">error</span>
+                <div>
+                  <div class="text-sm font-semibold text-red-800 dark:text-red-300 mb-1">Endpoint Error</div>
+                  <div class="text-sm text-red-700 dark:text-red-200/80">This endpoint is currently unavailable.</div>
+                </div>
+              </div>
+            </div>
+          <% } else if (endpoint.status === 'maintenance') { %>
+            <div class="rounded-xl border border-yellow-200 bg-yellow-50/80 p-4 mb-4 dark:border-yellow-500/40 dark:bg-yellow-100/10">
+              <div class="flex items-start">
+                <span class="material-icons-outlined text-yellow-500 text-sm mr-3 mt-0.5">warning</span>
+                <div>
+                  <div class="text-sm font-semibold text-yellow-800 dark:text-yellow-300 mb-1">Under Maintenance</div>
+                  <div class="text-sm text-yellow-700 dark:text-yellow-200/80">Responses may be unstable.</div>
+                </div>
+              </div>
+            </div>
+          <% } %>
+
+          <div class="text-slate-700 dark:text-slate-200 font-bold text-sm mb-4 flex items-center">
+            <span class="material-icons-outlined text-purple-500 text-sm mr-2">play_circle</span> 
+            TRY IT OUT
+          </div>
+
+          <form id="form-<%= endpointIndex %>"
+                onsubmit="executeRequest(event, <%= endpointIndex %>, '<%= endpoint.method %>', '<%= endpoint.path %>', '<%= endpoint.contentType || 'application/json' %>')">
+
+            <% if (endpoint.routeParameters && endpoint.routeParameters.length > 0) { %>
+              <div class="mb-5 rounded-xl border border-purple-200 bg-purple-50/70 p-4 dark:border-purple-500/30 dark:bg-purple-500/10">
+                <div class="text-sm font-bold text-purple-800 dark:text-purple-300 mb-3 flex items-center">
+                  <span class="material-icons-outlined text-sm mr-2">route</span> ROUTE PARAMETERS
+                </div>
+                <div class="space-y-3">
+                  <% endpoint.routeParameters.forEach(function(param){ %>
+                    <div>
+                      <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        <%= param.name %> <span class="text-red-500">*</span>
+                      </label>
+                      <div class="text-sm text-slate-600 dark:text-slate-400 mb-2"><%= param.description %></div>
+
+                      <% if (param.options && param.options.length) { %>
+                        <select name="route_<%= param.name %>"
+                                class="w-full rounded-xl px-4 py-3 border border-slate-200 dark:border-slate-700 text-sm bg-white dark:bg-slate-800 focus:ring-2 focus:ring-purple-300 focus:border-purple-300 transition-colors shadow-sm">
+                          <% param.options.forEach(function(option, i){ %>
+                            <option value="<%= option %>" <%= i===0 ? 'selected' : '' %>><%= option %></option>
+                          <% }) %>
+                        </select>
+                      <% } else { %>
+                        <input type="text" name="route_<%= param.name %>"
+                               class="w-full rounded-xl px-4 py-3 border border-slate-200 dark:border-slate-700 text-sm bg-white dark:bg-slate-800 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-purple-300 focus:border-purple-300 transition-colors shadow-sm"
+                               placeholder="<%= param.example || ('Enter ' + param.name + '...') %>" required>
+                      <% } %>
+                    </div>
+                  <% }) %>
+                </div>
+              </div>
+            <% } %>
+
+            <% if (endpoint.parameters) { %>
+              <div class="mb-5 space-y-4">
+                <% if (endpoint.parameters.required && endpoint.parameters.required.length) { %>
+                  <% endpoint.parameters.required.forEach(function(param){ %>
+                    <div>
+                      <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        <%= typeof param === 'string' ? param : param.name %> <span class="text-red-500">*</span>
+                      </label>
+                      <% if (typeof param === 'object') { %>
+                        <div class="text-sm text-slate-600 dark:text-slate-400 mb-2"><%= param.description %></div>
+                      <% } %>
+
+                      <% if (typeof param === 'object' && param.options && param.options.length) { %>
+                        <select name="<%= param.name %>"
+                                class="w-full rounded-xl px-4 py-3 border border-slate-200 dark:border-slate-700 text-sm bg-white dark:bg-slate-800 focus:ring-2 focus:ring-purple-300 focus:border-purple-300 transition-colors shadow-sm" required>
+                          <% param.options.forEach(function(opt, i){ %>
+                            <option value="<%= opt %>" <%= i===0 ? 'selected' : '' %>><%= opt %></option>
+                          <% }) %>
+                        </select>
+                      <% } else { %>
+                        <input type="<%= typeof param === 'object' && param.type === 'number' ? 'number' : 'text' %>"
+                               name="<%= typeof param === 'string' ? param : param.name %>"
+                               class="w-full rounded-xl px-4 py-3 border border-slate-200 dark:border-slate-700 text-sm bg-white dark:bg-slate-800 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-purple-300 focus:border-purple-300 transition-colors shadow-sm"
+                               placeholder="<%= typeof param === 'object' && param.example ? param.example : 'Enter ' + (typeof param === 'string' ? param : param.name) + '...' %>" required>
+                      <% } %>
+                    </div>
+                  <% }) %>
+                <% } %>
+
+                <% if (endpoint.parameters.optional && endpoint.parameters.optional.length) { %>
+                  <% endpoint.parameters.optional.forEach(function(param){ %>
+                    <div>
+                      <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        <%= typeof param === 'string' ? param : param.name %>
+                      </label>
+                      <% if (typeof param === 'object') { %>
+                        <div class="text-sm text-slate-600 dark:text-slate-400 mb-2"><%= param.description %></div>
+                      <% } %>
+
+                      <% if (typeof param === 'object' && param.options && param.options.length) { %>
+                        <select name="<%= param.name %>"
+                                class="w-full rounded-xl px-4 py-3 border border-slate-200 dark:border-slate-700 text-sm bg-white dark:bg-slate-800 focus:ring-2 focus:ring-purple-300 focus:border-purple-300 transition-colors shadow-sm">
+                          <% param.options.forEach(function(opt, i){ %>
+                            <option value="<%= opt %>" <%= i===0 ? 'selected' : '' %>><%= opt %></option>
+                          <% }) %>
+                        </select>
+                      <% } else { %>
+                        <input type="<%= typeof param === 'object' && param.type === 'number' ? 'number' : 'text' %>"
+                               name="<%= typeof param === 'string' ? param : param.name %>"
+                               class="w-full rounded-xl px-4 py-3 border border-slate-200 dark:border-slate-700 text-sm bg-white dark:bg-slate-800 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-purple-300 focus:border-purple-300 transition-colors shadow-sm"
+                               placeholder="<%= typeof param === 'object' && param.example ? param.example : 'Enter ' + (typeof param === 'string' ? param : param.name) + ' (optional)...' %>">
+                      <% } %>
+                    </div>
+                  <% }) %>
+                <% } %>
+              </div>
+            <% } %>
+
+            <% if (endpoint.formData) { %>
+              <div class="mb-5 space-y-4">
+                <% Object.keys(endpoint.formData).forEach(function(field){ %>
+                  <div>
+                    <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      <%= field %> <% if (endpoint.formData[field].includes('required')) { %><span class="text-red-500">*</span><% } %>
+                    </label>
+                    <% if (field === 'image' || endpoint.formData[field].includes('file')) { %>
+                      <input type="file" name="<%= field %>" class="w-full rounded-xl px-4 py-3 border border-slate-200 dark:border-slate-700 text-sm bg-white dark:bg-slate-800 focus:ring-2 focus:ring-purple-300 focus:border-purple-300 transition-colors shadow-sm" <% if (endpoint.formData[field].includes('required')) { %>required<% } %>>
+                    <% } else { %>
+                      <input type="text" name="<%= field %>" class="w-full rounded-xl px-4 py-3 border border-slate-200 dark:border-slate-700 text-sm bg-white dark:bg-slate-800 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-purple-300 focus:border-purple-300 transition-colors shadow-sm" placeholder="Enter <%= field %>..." <% if (endpoint.formData[field].includes('required')) { %>required<% } %>>
+                    <% } %>
+                  </div>
+                <% }) %>
+              </div>
+            <% } %>
+
+            <% if (endpoint.body && !endpoint.formData) { %>
+              <div class="mb-4">
+                <textarea 
+                  name="body" 
+                  rows="8" 
+                  class="w-full rounded-xl px-4 py-3 border border-slate-200 dark:border-slate-700 text-sm bg-white dark:bg-slate-800 placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-y focus:ring-2 focus:ring-purple-300 focus:border-purple-300 transition-colors shadow-sm font-mono"
+                  placeholder='Type plain text (e.g. hai) or paste JSON...'><%= typeof endpoint.body === 'object' ? JSON.stringify(endpoint.body, null, 2) : '' %></textarea>
+                <div class="text-sm text-slate-500 dark:text-slate-400 mt-2 flex items-center">
+                  <span class="material-icons-outlined text-sm mr-1">info</span>
+                  Modify the JSON as needed
+                </div>
+              </div>
+            <% } %>
+
+            <div class="mt-4 flex gap-3">
+              <button type="submit" class="gbtn" <% if (endpoint.status === 'error' || endpoint.status === 'maintenance') { %>disabled<% } %>>
+                <span class="material-icons-outlined text-[14px]">play_arrow</span> Execute Request
+              </button>
+              <button type="button" id="clear-<%= endpointIndex %>" onclick="clearResponse(<%= endpointIndex %>)"
+                      class="hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-900 dark:text-slate-100 hover:border-purple-300 dark:hover:border-purple-600 transition-colors shadow-sm">
+                Clear Response
+              </button>
+            </div>
+          </form>
+
+          <!-- Response -->
+          <div id="response-<%= endpointIndex %>" class="hidden mt-6">
+            <div class="text-slate-700 dark:text-slate-200 font-bold text-sm mb-3 flex items-center">
+              <span class="material-icons-outlined text-purple-500 text-sm mr-2">code</span> RESPONSE
+            </div>
+            <div class="bg-slate-900 text-white text-sm p-4 rounded-xl shadow-inner font-mono">
+              <div class="max-h-80 overflow-auto scrollbar-thin" id="response-content-<%= endpointIndex %>"></div>
+            </div>
+          </div>
+
+          <!-- CURL -->
+          <div id="curl-<%= endpointIndex %>" class="hidden mt-6">
+            <div class="text-slate-700 dark:text-slate-200 font-bold text-sm mb-3 flex items-center">
+              <span class="material-icons-outlined text-purple-500 text-sm mr-2">terminal</span> CURL COMMAND
+            </div>
+            <div class="bg-slate-900 text-white text-sm p-4 rounded-xl shadow-inner">
+              <pre class="whitespace-pre-wrap overflow-auto max-h-40 scrollbar-thin" id="curl-content-<%= endpointIndex %>"></pre>
+            </div>
+          </div>
+
+          <!-- Status Table -->
+          <div class="mt-6">
+            <div class="text-slate-700 dark:text-slate-200 font-bold text-sm mb-3 flex items-center">
+              <span class="material-icons-outlined text-purple-500 text-sm mr-2">list</span> HTTP STATUS CODES
+            </div>
+            <div class="rounded-2xl border border-slate-200/70 bg-white/80 dark:border-slate-700 dark:bg-slate-800/60 shadow-sm">
+              <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                  <thead class="bg-slate-50 dark:bg-slate-800/70 border-b border-slate-200 dark:border-slate-700">
+                    <tr>
+                      <th class="px-4 py-3 text-left font-semibold text-slate-700 dark:text-slate-300">Code</th>
+                      <th class="px-4 py-3 text-left font-semibold text-slate-700 dark:text-slate-300">Description</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
+                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors">
+                      <td class="px-4 py-3"><div class="flex items-center"><span class="material-icons-outlined text-green-500 text-sm mr-2">check_circle</span><span class="font-mono font-semibold text-green-500">200</span></div></td>
+                      <td class="px-4 py-3">OK - Request successful</td>
+                    </tr>
+                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors">
+                      <td class="px-4 py-3"><div class="flex items-center"><span class="material-icons-outlined text-red-500 text-sm mr-2">error</span><span class="font-mono font-semibold text-red-500">400</span></div></td>
+                      <td class="px-4 py-3">Bad Request - Invalid parameters</td>
+                    </tr>
+                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors">
+                      <td class="px-4 py-3"><div class="flex items-center"><span class="material-icons-outlined text-red-500 text-sm mr-2">error</span><span class="font-mono font-semibold text-red-500">405</span></div></td>
+                      <td class="px-4 py-3">Method Not Allowed</td>
+                    </tr>
+                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors">
+                      <td class="px-4 py-3"><div class="flex items-center"><span class="material-icons-outlined text-yellow-500 text-sm mr-2">warning</span><span class="font-mono font-semibold text-yellow-500">429</span></div></td>
+                      <td class="px-4 py-3">Too Many Requests</td>
+                    </tr>
+                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors">
+                      <td class="px-4 py-3"><div class="flex items-center"><span class="material-icons-outlined text-red-500 text-sm mr-2">error</span><span class="font-mono font-semibold text-red-500">500</span></div></td>
+                      <td class="px-4 py-3">Internal Server Error</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+        </div> <!-- /panel -->
+      </div>
+    <% }) %>
+  </div>
+</div>
+
+<!-- libs -->
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+<script>
+  let searchInput, apiItems, noResults, apiList;
+
+  function toggleEndpoint(i){
+    const el = document.getElementById(`endpoint-${i}`);
+    const ic = document.getElementById(`endpoint-icon-${i}`);
+    if(el.classList.contains('hidden')){
+      el.classList.remove('hidden'); 
+      el.classList.add('slide-down'); 
+      ic.style.transform='rotate(180deg)';
+    }else{
+      el.classList.add('slide-up'); 
+      ic.style.transform='rotate(0deg)';
+      setTimeout(()=>{ 
+        el.classList.add('hidden'); 
+        el.classList.remove('slide-up','slide-down'); 
+      },180);
+    }
+  }
+
+  function clearResponse(i){
+    const r = document.getElementById(`response-${i}`);
+    const rc = document.getElementById(`response-content-${i}`);
+    const c = document.getElementById(`curl-${i}`);
+    const cc = document.getElementById(`curl-content-${i}`);
+    const btn = document.getElementById(`clear-${i}`);
+    r.classList.add('slide-up'); 
+    c.classList.add('slide-up');
+    setTimeout(()=>{ 
+      r.classList.add('hidden'); 
+      r.classList.remove('slide-up','slide-down'); 
+      rc.innerHTML='';
+      c.classList.add('hidden'); 
+      c.classList.remove('slide-up','slide-down'); 
+      cc.textContent='';
+      btn.classList.add('hidden'); 
+    },180);
+  }
+
+  async function executeRequest(e, i, method, path, contentType){
+    e.preventDefault();
+    const form = e.target;
+    const r = document.getElementById(`response-${i}`);
+    const rc = document.getElementById(`response-content-${i}`);
+    const curlBox = document.getElementById(`curl-${i}`);
+    const curlText = document.getElementById(`curl-content-${i}`);
+
+    let fullUrl = window.location.origin + path;
+    const fd = new FormData(form);
+    let curl = `curl -X ${method}`;
+
+    // route params
+    for (let [k,v] of fd.entries()){
+      if(k.startsWith('route_')){
+        const p = ':'+k.replace('route_','');
+        fullUrl = fullUrl.replace(p, encodeURIComponent(v));
+        path = path.replace(p, encodeURIComponent(v));
+      }
+    }
+    curl += ` "${fullUrl}"`;
+
+    try{
+      const cfg = { method, url: fullUrl, headers:{} };
+
+      if(method==='GET' || method==='HEAD'){
+        const params = {};
+        for (let [k,v] of fd.entries()){
+          if (v && k!=='body' && !k.startsWith('route_')) params[k]=v;
+        }
+        if(Object.keys(params).length){
+          cfg.params = params;
+          const qs = new URLSearchParams(params).toString();
+          fullUrl += `?${qs}`; path += `?${qs}`; curl = `curl -X ${method} "${fullUrl}"`;
+        }
+      }else{
+        if(contentType==='multipart/form-data'){
+          const nfd = new FormData(); const fields=[];
+          for (let [k,v] of fd.entries()){
+            if(!k.startsWith('route_')){ nfd.append(k,v);
+              fields.push(v instanceof File ? `-F "${k}=@${v.name}"` : `-F "${k}=${v}"`);
+            }
+          }
+          cfg.data = nfd; cfg.headers['Content-Type']='multipart/form-data';
+          curl += ` \\\n  ${fields.join(' \\\n  ')}`;
+        }else if(contentType==='application/json'){
+          // NEW: support JSON or text/plain from textarea
+          const txt = form.querySelector('textarea[name="body"]');
+          if (txt && txt.value.trim()){
+            const raw = txt.value.trim();
+            let asJson = null;
+            try { asJson = JSON.parse(raw); } catch(e){ asJson = null; }
+            if(asJson !== null){
+              cfg.headers['Content-Type'] = 'application/json';
+              cfg.data = asJson;
+              curl += ` \\\n  -H "Content-Type: application/json" \\\n  -d '${JSON.stringify(asJson)}'`;
+            }else{
+              cfg.headers['Content-Type'] = 'text/plain';
+              cfg.data = raw;
+              curl += ` \\\n  -H "Content-Type: text/plain" \\\n  --data-raw ${JSON.stringify(raw)}`;
+            }
+          }else{
+            const jsonBody = {};
+            for (let [k,v] of fd.entries()){
+              if (k!=='body' && !k.startsWith('route_') && v) jsonBody[k]=v;
+            }
+            if(Object.keys(jsonBody).length){
+              cfg.headers['Content-Type']='application/json';
+              cfg.data=jsonBody;
+              curl += ` \\\n  -H "Content-Type: application/json" \\\n  -d '${JSON.stringify(jsonBody)}'`;
+            }
+          }
+        }else{
+          // other fallback → send as simple JSON
+          const jsonBody = {};
+          for (let [k,v] of fd.entries()){
+            if (k!=='body' && !k.startsWith('route_') && v) jsonBody[k]=v;
+          }
+          if(Object.keys(jsonBody).length){
+            cfg.headers['Content-Type']='application/json';
+            cfg.data=jsonBody;
+            curl += ` \\\n  -H "Content-Type: application/json" \\\n  -d '${JSON.stringify(jsonBody)}'`;
+          }
+        }
+      }
+
+      curlText.textContent = curl;
+      curlBox.classList.remove('hidden'); curlBox.classList.add('slide-down');
+
+      rc.innerHTML = '<span class="text-white flex items-center"><span class="material-icons-outlined mr-2 animate-spin">autorenew</span> Loading...</span>';
+      r.classList.remove('hidden'); r.classList.add('slide-down');
+
+      const res = await axios(cfg);
+      const ctype = res.headers['content-type'] || '';
+
+      const head = `<div class="text-slate-400 text-sm mb-4 space-y-1">
+        <div class="flex items-center"><span class="material-icons-outlined text-sm mr-2">send</span><span>Method: ${method}</span></div>
+        <div class="flex items-center"><span class="material-icons-outlined text-sm mr-2">link</span><span>URL: ${fullUrl}</span></div>
+        <div class="flex items-center"><span class="material-icons-outlined text-sm mr-2">status</span><span>Status: ${res.status} ${res.statusText}</span></div>
+      </div>`;
+
+      if(ctype.includes('application/json')){
+        const s = JSON.stringify(res.data, null, 2)
+          .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+          .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+        rc.innerHTML = head + `<pre class="text-white">${s}</pre>`;
+      }else if(ctype.includes('image/')){
+        cfg.responseType='blob'; const b = await axios(cfg);
+        const url = URL.createObjectURL(b.data);
+        rc.innerHTML = head + `<img src="${url}" class="max-w-full h-auto rounded-lg shadow-lg">`;
+      }else if(ctype.includes('audio/')){
+        cfg.responseType='blob'; const b = await axios(cfg);
+        const url = URL.createObjectURL(b.data);
+        rc.innerHTML = head + `<div class="text-white mb-3">Audio Response:</div>
+          <audio controls class="w-full mb-3 rounded-lg"><source src="${url}" type="${ctype}"></audio>
+          <a href="${url}" download class="inline-flex items-center text-sm text-cyan-300 hover:text-cyan-200 transition-colors">
+            <span class="material-icons-outlined text-sm mr-1">download</span>Download Audio
+          </a>`;
+      }else if(ctype.includes('video/')){
+        cfg.responseType='blob'; const b = await axios(cfg);
+        const url = URL.createObjectURL(b.data);
+        rc.innerHTML = head + `<div class="text-white mb-3">Video Response:</div>
+          <video controls class="w-full max-h-64 mb-3 rounded-lg shadow-lg"><source src="${url}" type="${ctype}"></video>
+          <a href="${url}" download class="inline-flex items-center text-sm text-cyan-300 hover:text-cyan-200 transition-colors">
+            <span class="material-icons-outlined text-sm mr-1">download</span>Download Video
+          </a>`;
+      }else if(ctype.includes('application/pdf')){
+        cfg.responseType='blob'; const b = await axios(cfg);
+        const url = URL.createObjectURL(b.data);
+        rc.innerHTML = head + `<div class="text-white mb-3">PDF Document:</div>
+          <iframe src="${url}" class="w-full h-64 border border-slate-600 mb-3 rounded-lg shadow-lg"></iframe>
+          <a href="${url}" download class="inline-flex items-center text-sm text-cyan-300 hover:text-cyan-200 transition-colors">
+            <span class="material-icons-outlined text-sm mr-1">download</span>Download PDF
+          </a>`;
+      }else{
+        rc.innerHTML = head + `<pre class="text-white whitespace-pre-wrap m-0">${res.data}</pre>`;
+      }
+    }catch(err){
+      let msg = err.message, stat = 'Error';
+      if(err.response){ stat = `${err.response.status} ${err.response.statusText}`;
+        msg = err.response.data?.message || err.response.data || err.message; }
+      else if(err.request){ msg = 'Network Error: ' + err.message; }
+
+      rc.innerHTML = `<div class="text-slate-400 text-sm mb-4 space-y-1">
+        <div class="flex items-center"><span class="material-icons-outlined text-sm mr-2">send</span><span>Method: ${method}</span></div>
+        <div class="flex items-center"><span class="material-icons-outlined text-sm mr-2">link</span><span>URL: ${fullUrl}</span></div>
+        <div class="flex items-center"><span class="material-icons-outlined text-sm mr-2">status</span><span>Status: ${stat}</span></div>
+      </div>
+      <div class="text-red-300 flex items-start">
+        <span class="material-icons-outlined text-sm mr-2 mt-0.5">error</span>
+        <pre class="text-red-300 whitespace-pre-wrap m-0">Error: ${msg}</pre>
+      </div>`;
+      const r = document.getElementById(`response-${i}`);
+      r.classList.remove('hidden'); r.classList.add('slide-down');
+    }finally{
+      document.getElementById(`clear-${i}`).classList.remove('hidden');
+    }
+  }
+
+  function applyFilters(){
+    const term = searchInput.value.toLowerCase().trim();
+    let visible = 0;
+    apiItems.forEach(item=>{
+      const path = item.getAttribute('data-path').toLowerCase();
+      const alias = item.getAttribute('data-alias').toLowerCase();
+      const ok = path.includes(term) || alias.includes(term);
+      item.style.display = ok ? 'block' : 'none';
+      if(ok) visible++;
+    });
+    noResults.classList.toggle('hidden', !(visible===0 && apiItems.length>0));
+    apiList.classList.toggle('hidden', visible===0 && apiItems.length>0);
+  }
+
+  window.addEventListener('load', ()=>{
+    searchInput = document.getElementById('searchInput');
+    apiItems = document.querySelectorAll('.api-item');
+    noResults = document.getElementById('noResults');
+    apiList = document.getElementById('apiList');
+    searchInput.addEventListener('input', applyFilters);
+  });
+</script>
+
+<%- include('partials/footer', { name }) %>
