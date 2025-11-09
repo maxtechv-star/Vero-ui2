@@ -5,7 +5,7 @@
 
 <!-- Header -->
 <div class="flex flex-col text-left mb-8">
-  <a href="/" class="inline-flex items-center text-sm text-slate-600 dark:text-slate-300 hover:text-purple-600 dark:hover:text-purple-300 mb-4 transition-colors group">
+  <a href="/" class="inline-flex items-center text-sm text-eye-muted hover:text-purple-250 mb-4 transition-colors group">
     <span class="material-icons-outlined mr-2 group-hover:-translate-x-1 transition-transform">arrow_back</span> 
     Back to Categories
   </a>
@@ -15,11 +15,11 @@
       <h2 class="flex flex-wrap items-center gap-3 text-3xl font-bold mb-2">
         <span class="flex-grow gradient-text"><%= categoryName %></span>
         <span class="inline-flex items-center rounded-2xl px-4 py-2 text-xs font-extrabold text-white
-                     bg-gradient-to-r from-purple-500 via-indigo-500 to-blue-600 shadow-lg animate-glow">
+                     bg-gradient-to-r from-purple-350 via-indigo-500 to-blue-500 shadow-lg animate-glow">
           <%= category.items.length %> Endpoints
         </span>
       </h2>
-      <p class="text-slate-600 dark:text-slate-300 text-sm leading-relaxed max-w-2xl"><%= categoryDesc %></p>
+      <p class="text-eye-muted text-sm leading-relaxed max-w-2xl"><%= categoryDesc %></p>
     </div>
   </div>
 </div>
@@ -27,30 +27,30 @@
 <!-- Search -->
 <div class="flex items-center justify-between mb-6">
   <div class="flex-1 relative">
-    <span class="material-icons-outlined absolute left-4 top-3.5 text-purple-500">search</span>
+    <span class="material-icons-outlined absolute left-4 top-3.5 text-purple-250">search</span>
     <input id="searchInput" type="text" placeholder="Search endpoints by name or path..."
-      class="w-full rounded-2xl border-purple-200 dark:border-purple-800
-             glass dark:glass-dark text-slate-900 dark:text-slate-100
-             placeholder-slate-400 dark:placeholder-slate-500
-             pl-12 pr-4 py-4 text-sm outline-none focus:ring-2 focus:ring-purple-300 transition-all shadow-lg" />
-    <div class="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-r from-transparent via-white/30 to-transparent
-                bg-[length:200%_100%] animate-shimmer dark:via-white/10"></div>
+      class="w-full rounded-2xl border-purple-350/20
+             dark-glass text-eye-safe
+             placeholder-eye-muted
+             pl-12 pr-4 py-4 text-sm outline-none focus:ring-2 focus:ring-purple-350/50 transition-all shadow-lg" />
+    <div class="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-r from-transparent via-purple-350/5 to-transparent
+                bg-[length:200%_100%] animate-shimmer"></div>
   </div>
 </div>
 
 <div id="content">
-  <div id="noResults" class="rounded-2xl glass dark:glass-dark p-12 text-center shadow-lg hidden">
-    <div class="w-16 h-16 rounded-2xl bg-gradient-to-r from-purple-500 to-blue-600 flex items-center justify-center mx-auto mb-4">
+  <div id="noResults" class="rounded-2xl dark-glass p-12 text-center shadow-lg border border-purple-350/10 hidden">
+    <div class="w-16 h-16 rounded-2xl bg-gradient-to-r from-purple-350 to-blue-500 flex items-center justify-center mx-auto mb-4">
       <span class="material-icons-outlined text-white">search_off</span>
     </div>
-    <h3 class="text-lg font-semibold text-slate-700 dark:text-slate-300 mb-2">No results found</h3>
-    <p class="text-sm text-slate-500 dark:text-slate-400">Try adjusting your search terms</p>
+    <h3 class="text-lg font-semibold text-eye-safe mb-2">No results found</h3>
+    <p class="text-sm text-eye-muted">Try adjusting your search terms</p>
   </div>
 
   <div id="apiList" class="space-y-4">
     <% category.items.forEach((endpoint, endpointIndex) => { %>
       <div
-        class="rounded-2xl glass dark:glass-dark p-5 shadow-lg hover:shadow-xl transition-all duration-300 api-item group"
+        class="rounded-2xl dark-glass p-5 shadow-lg hover:shadow-xl transition-all duration-300 api-item group border border-purple-350/10"
         data-method="<%= endpoint.method %>"
         data-path="<%= endpoint.path %>"
         data-alias="<%= endpoint.alias %>">
@@ -59,55 +59,55 @@
         <button onclick="toggleEndpoint(<%= endpointIndex %>)" class="w-full text-left flex items-center justify-between group">
           <div class="flex items-center min-w-0 flex-1 gap-4">
             <span class="px-4 py-2 text-xs font-extrabold text-white rounded-xl shadow-lg
-                         bg-gradient-to-r from-purple-500 via-indigo-500 to-blue-600 transition-transform group-hover:scale-105">
+                         bg-gradient-to-r from-purple-350 via-indigo-500 to-blue-500 transition-transform group-hover:scale-105">
               <%= endpoint.method %>
             </span>
             <div class="flex flex-col min-w-0 flex-1">
-              <span class="font-bold truncate max-w-[90%] font-mono text-base group-hover:text-purple-600 dark:group-hover:text-purple-300 transition-colors" 
+              <span class="font-bold truncate max-w-[90%] font-mono text-base text-eye-safe group-hover:text-purple-250 transition-colors" 
                     title="<%= endpoint.path %>"><%= endpoint.path %></span>
-              <span class="text-sm text-slate-500 dark:text-slate-400 truncate max-w-[90%] mt-1" 
+              <span class="text-sm text-eye-muted truncate max-w-[90%] mt-1" 
                     title="<%= endpoint.alias %>"><%= endpoint.alias %></span>
             </div>
           </div>
 
           <div class="flex items-center gap-3">
             <% if (endpoint.status === 'error') { %>
-              <span class="material-icons-outlined text-red-500 animate-pulse" title="Endpoint Error">error</span>
+              <span class="material-icons-outlined text-red-400 animate-pulse" title="Endpoint Error">error</span>
             <% } else if (endpoint.status === 'maintenance') { %>
-              <span class="material-icons-outlined text-yellow-500" title="Under Maintenance">warning</span>
+              <span class="material-icons-outlined text-yellow-400" title="Under Maintenance">warning</span>
             <% } %>
-            <span class="material-icons-outlined text-purple-500 transition-transform duration-300 group-hover:rotate-180" 
+            <span class="material-icons-outlined text-purple-250 transition-transform duration-300 group-hover:rotate-180" 
                   id="endpoint-icon-<%= endpointIndex %>">expand_more</span>
           </div>
         </button>
 
         <!-- Panel -->
-        <div id="endpoint-<%= endpointIndex %>" class="hidden mt-4 p-5 rounded-2xl bg-slate-50/70 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 shadow-inner">
+        <div id="endpoint-<%= endpointIndex %>" class="hidden mt-4 p-5 rounded-2xl bg-dark-300/60 border border-purple-350/10 shadow-inner">
 
           <% if (endpoint.status === 'error') { %>
-            <div class="rounded-xl border border-red-200 bg-red-50/80 p-4 mb-4 dark:border-red-500/40 dark:bg-red-100/10">
+            <div class="rounded-xl border border-red-500/20 bg-red-500/10 p-4 mb-4">
               <div class="flex items-start">
-                <span class="material-icons-outlined text-red-500 text-sm mr-3 mt-0.5">error</span>
+                <span class="material-icons-outlined text-red-400 text-sm mr-3 mt-0.5">error</span>
                 <div>
-                  <div class="text-sm font-semibold text-red-800 dark:text-red-300 mb-1">Endpoint Error</div>
-                  <div class="text-sm text-red-700 dark:text-red-200/80">This endpoint is currently unavailable.</div>
+                  <div class="text-sm font-semibold text-red-300 mb-1">Endpoint Error</div>
+                  <div class="text-sm text-red-400/80">This endpoint is currently unavailable.</div>
                 </div>
               </div>
             </div>
           <% } else if (endpoint.status === 'maintenance') { %>
-            <div class="rounded-xl border border-yellow-200 bg-yellow-50/80 p-4 mb-4 dark:border-yellow-500/40 dark:bg-yellow-100/10">
+            <div class="rounded-xl border border-yellow-500/20 bg-yellow-500/10 p-4 mb-4">
               <div class="flex items-start">
-                <span class="material-icons-outlined text-yellow-500 text-sm mr-3 mt-0.5">warning</span>
+                <span class="material-icons-outlined text-yellow-400 text-sm mr-3 mt-0.5">warning</span>
                 <div>
-                  <div class="text-sm font-semibold text-yellow-800 dark:text-yellow-300 mb-1">Under Maintenance</div>
-                  <div class="text-sm text-yellow-700 dark:text-yellow-200/80">Responses may be unstable.</div>
+                  <div class="text-sm font-semibold text-yellow-300 mb-1">Under Maintenance</div>
+                  <div class="text-sm text-yellow-400/80">Responses may be unstable.</div>
                 </div>
               </div>
             </div>
           <% } %>
 
-          <div class="text-slate-700 dark:text-slate-200 font-bold text-sm mb-4 flex items-center">
-            <span class="material-icons-outlined text-purple-500 text-sm mr-2">play_circle</span> 
+          <div class="text-eye-safe font-bold text-sm mb-4 flex items-center">
+            <span class="material-icons-outlined text-purple-250 text-sm mr-2">play_circle</span> 
             TRY IT OUT
           </div>
 
@@ -115,28 +115,28 @@
                 onsubmit="executeRequest(event, <%= endpointIndex %>, '<%= endpoint.method %>', '<%= endpoint.path %>', '<%= endpoint.contentType || 'application/json' %>')">
 
             <% if (endpoint.routeParameters && endpoint.routeParameters.length > 0) { %>
-              <div class="mb-5 rounded-xl border border-purple-200 bg-purple-50/70 p-4 dark:border-purple-500/30 dark:bg-purple-500/10">
-                <div class="text-sm font-bold text-purple-800 dark:text-purple-300 mb-3 flex items-center">
+              <div class="mb-5 rounded-xl border border-purple-350/20 bg-purple-350/10 p-4">
+                <div class="text-sm font-bold text-purple-250 mb-3 flex items-center">
                   <span class="material-icons-outlined text-sm mr-2">route</span> ROUTE PARAMETERS
                 </div>
                 <div class="space-y-3">
                   <% endpoint.routeParameters.forEach(function(param){ %>
                     <div>
-                      <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                        <%= param.name %> <span class="text-red-500">*</span>
+                      <label class="block text-sm font-semibold text-eye-safe mb-1">
+                        <%= param.name %> <span class="text-red-400">*</span>
                       </label>
-                      <div class="text-sm text-slate-600 dark:text-slate-400 mb-2"><%= param.description %></div>
+                      <div class="text-sm text-eye-muted mb-2"><%= param.description %></div>
 
                       <% if (param.options && param.options.length) { %>
                         <select name="route_<%= param.name %>"
-                                class="w-full rounded-xl px-4 py-3 border border-slate-200 dark:border-slate-700 text-sm bg-white dark:bg-slate-800 focus:ring-2 focus:ring-purple-300 focus:border-purple-300 transition-colors shadow-sm">
+                                class="w-full rounded-xl px-4 py-3 border border-purple-350/20 text-sm bg-dark-300 text-eye-safe focus:ring-2 focus:ring-purple-350/50 focus:border-purple-350/30 transition-colors shadow-sm">
                           <% param.options.forEach(function(option, i){ %>
                             <option value="<%= option %>" <%= i===0 ? 'selected' : '' %>><%= option %></option>
                           <% }) %>
                         </select>
                       <% } else { %>
                         <input type="text" name="route_<%= param.name %>"
-                               class="w-full rounded-xl px-4 py-3 border border-slate-200 dark:border-slate-700 text-sm bg-white dark:bg-slate-800 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-purple-300 focus:border-purple-300 transition-colors shadow-sm"
+                               class="w-full rounded-xl px-4 py-3 border border-purple-350/20 text-sm bg-dark-300 text-eye-safe placeholder-eye-muted focus:ring-2 focus:ring-purple-350/50 focus:border-purple-350/30 transition-colors shadow-sm"
                                placeholder="<%= param.example || ('Enter ' + param.name + '...') %>" required>
                       <% } %>
                     </div>
@@ -150,16 +150,16 @@
                 <% if (endpoint.parameters.required && endpoint.parameters.required.length) { %>
                   <% endpoint.parameters.required.forEach(function(param){ %>
                     <div>
-                      <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                        <%= typeof param === 'string' ? param : param.name %> <span class="text-red-500">*</span>
+                      <label class="block text-sm font-semibold text-eye-safe mb-1">
+                        <%= typeof param === 'string' ? param : param.name %> <span class="text-red-400">*</span>
                       </label>
                       <% if (typeof param === 'object') { %>
-                        <div class="text-sm text-slate-600 dark:text-slate-400 mb-2"><%= param.description %></div>
+                        <div class="text-sm text-eye-muted mb-2"><%= param.description %></div>
                       <% } %>
 
                       <% if (typeof param === 'object' && param.options && param.options.length) { %>
                         <select name="<%= param.name %>"
-                                class="w-full rounded-xl px-4 py-3 border border-slate-200 dark:border-slate-700 text-sm bg-white dark:bg-slate-800 focus:ring-2 focus:ring-purple-300 focus:border-purple-300 transition-colors shadow-sm" required>
+                                class="w-full rounded-xl px-4 py-3 border border-purple-350/20 text-sm bg-dark-300 text-eye-safe focus:ring-2 focus:ring-purple-350/50 focus:border-purple-350/30 transition-colors shadow-sm" required>
                           <% param.options.forEach(function(opt, i){ %>
                             <option value="<%= opt %>" <%= i===0 ? 'selected' : '' %>><%= opt %></option>
                           <% }) %>
@@ -167,7 +167,7 @@
                       <% } else { %>
                         <input type="<%= typeof param === 'object' && param.type === 'number' ? 'number' : 'text' %>"
                                name="<%= typeof param === 'string' ? param : param.name %>"
-                               class="w-full rounded-xl px-4 py-3 border border-slate-200 dark:border-slate-700 text-sm bg-white dark:bg-slate-800 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-purple-300 focus:border-purple-300 transition-colors shadow-sm"
+                               class="w-full rounded-xl px-4 py-3 border border-purple-350/20 text-sm bg-dark-300 text-eye-safe placeholder-eye-muted focus:ring-2 focus:ring-purple-350/50 focus:border-purple-350/30 transition-colors shadow-sm"
                                placeholder="<%= typeof param === 'object' && param.example ? param.example : 'Enter ' + (typeof param === 'string' ? param : param.name) + '...' %>" required>
                       <% } %>
                     </div>
@@ -177,16 +177,16 @@
                 <% if (endpoint.parameters.optional && endpoint.parameters.optional.length) { %>
                   <% endpoint.parameters.optional.forEach(function(param){ %>
                     <div>
-                      <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      <label class="block text-sm font-semibold text-eye-safe mb-1">
                         <%= typeof param === 'string' ? param : param.name %>
                       </label>
                       <% if (typeof param === 'object') { %>
-                        <div class="text-sm text-slate-600 dark:text-slate-400 mb-2"><%= param.description %></div>
+                        <div class="text-sm text-eye-muted mb-2"><%= param.description %></div>
                       <% } %>
 
                       <% if (typeof param === 'object' && param.options && param.options.length) { %>
                         <select name="<%= param.name %>"
-                                class="w-full rounded-xl px-4 py-3 border border-slate-200 dark:border-slate-700 text-sm bg-white dark:bg-slate-800 focus:ring-2 focus:ring-purple-300 focus:border-purple-300 transition-colors shadow-sm">
+                                class="w-full rounded-xl px-4 py-3 border border-purple-350/20 text-sm bg-dark-300 text-eye-safe focus:ring-2 focus:ring-purple-350/50 focus:border-purple-350/30 transition-colors shadow-sm">
                           <% param.options.forEach(function(opt, i){ %>
                             <option value="<%= opt %>" <%= i===0 ? 'selected' : '' %>><%= opt %></option>
                           <% }) %>
@@ -194,7 +194,7 @@
                       <% } else { %>
                         <input type="<%= typeof param === 'object' && param.type === 'number' ? 'number' : 'text' %>"
                                name="<%= typeof param === 'string' ? param : param.name %>"
-                               class="w-full rounded-xl px-4 py-3 border border-slate-200 dark:border-slate-700 text-sm bg-white dark:bg-slate-800 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-purple-300 focus:border-purple-300 transition-colors shadow-sm"
+                               class="w-full rounded-xl px-4 py-3 border border-purple-350/20 text-sm bg-dark-300 text-eye-safe placeholder-eye-muted focus:ring-2 focus:ring-purple-350/50 focus:border-purple-350/30 transition-colors shadow-sm"
                                placeholder="<%= typeof param === 'object' && param.example ? param.example : 'Enter ' + (typeof param === 'string' ? param : param.name) + ' (optional)...' %>">
                       <% } %>
                     </div>
@@ -207,13 +207,13 @@
               <div class="mb-5 space-y-4">
                 <% Object.keys(endpoint.formData).forEach(function(field){ %>
                   <div>
-                    <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      <%= field %> <% if (endpoint.formData[field].includes('required')) { %><span class="text-red-500">*</span><% } %>
+                    <label class="block text-sm font-semibold text-eye-safe mb-1">
+                      <%= field %> <% if (endpoint.formData[field].includes('required')) { %><span class="text-red-400">*</span><% } %>
                     </label>
                     <% if (field === 'image' || endpoint.formData[field].includes('file')) { %>
-                      <input type="file" name="<%= field %>" class="w-full rounded-xl px-4 py-3 border border-slate-200 dark:border-slate-700 text-sm bg-white dark:bg-slate-800 focus:ring-2 focus:ring-purple-300 focus:border-purple-300 transition-colors shadow-sm" <% if (endpoint.formData[field].includes('required')) { %>required<% } %>>
+                      <input type="file" name="<%= field %>" class="w-full rounded-xl px-4 py-3 border border-purple-350/20 text-sm bg-dark-300 text-eye-safe focus:ring-2 focus:ring-purple-350/50 focus:border-purple-350/30 transition-colors shadow-sm file:bg-dark-400 file:border-0 file:text-eye-safe file:rounded-lg file:px-3 file:py-2" <% if (endpoint.formData[field].includes('required')) { %>required<% } %>>
                     <% } else { %>
-                      <input type="text" name="<%= field %>" class="w-full rounded-xl px-4 py-3 border border-slate-200 dark:border-slate-700 text-sm bg-white dark:bg-slate-800 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-purple-300 focus:border-purple-300 transition-colors shadow-sm" placeholder="Enter <%= field %>..." <% if (endpoint.formData[field].includes('required')) { %>required<% } %>>
+                      <input type="text" name="<%= field %>" class="w-full rounded-xl px-4 py-3 border border-purple-350/20 text-sm bg-dark-300 text-eye-safe placeholder-eye-muted focus:ring-2 focus:ring-purple-350/50 focus:border-purple-350/30 transition-colors shadow-sm" placeholder="Enter <%= field %>..." <% if (endpoint.formData[field].includes('required')) { %>required<% } %>>
                     <% } %>
                   </div>
                 <% }) %>
@@ -225,9 +225,9 @@
                 <textarea 
                   name="body" 
                   rows="8" 
-                  class="w-full rounded-xl px-4 py-3 border border-slate-200 dark:border-slate-700 text-sm bg-white dark:bg-slate-800 placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-y focus:ring-2 focus:ring-purple-300 focus:border-purple-300 transition-colors shadow-sm font-mono"
+                  class="w-full rounded-xl px-4 py-3 border border-purple-350/20 text-sm bg-dark-300 text-eye-safe placeholder-eye-muted resize-y focus:ring-2 focus:ring-purple-350/50 focus:border-purple-350/30 transition-colors shadow-sm font-mono"
                   placeholder='Type plain text (e.g. hai) or paste JSON...'><%= typeof endpoint.body === 'object' ? JSON.stringify(endpoint.body, null, 2) : '' %></textarea>
-                <div class="text-sm text-slate-500 dark:text-slate-400 mt-2 flex items-center">
+                <div class="text-sm text-eye-muted mt-2 flex items-center">
                   <span class="material-icons-outlined text-sm mr-1">info</span>
                   Modify the JSON as needed
                 </div>
@@ -239,7 +239,7 @@
                 <span class="material-icons-outlined text-[14px]">play_arrow</span> Execute Request
               </button>
               <button type="button" id="clear-<%= endpointIndex %>" onclick="clearResponse(<%= endpointIndex %>)"
-                      class="hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-900 dark:text-slate-100 hover:border-purple-300 dark:hover:border-purple-600 transition-colors shadow-sm">
+                      class="hidden rounded-xl border border-purple-350/20 bg-dark-300 px-4 py-2 text-sm font-semibold text-eye-safe hover:border-purple-350/40 transition-colors shadow-sm">
                 Clear Response
               </button>
             </div>
@@ -247,58 +247,58 @@
 
           <!-- Response -->
           <div id="response-<%= endpointIndex %>" class="hidden mt-6">
-            <div class="text-slate-700 dark:text-slate-200 font-bold text-sm mb-3 flex items-center">
-              <span class="material-icons-outlined text-purple-500 text-sm mr-2">code</span> RESPONSE
+            <div class="text-eye-safe font-bold text-sm mb-3 flex items-center">
+              <span class="material-icons-outlined text-purple-250 text-sm mr-2">code</span> RESPONSE
             </div>
-            <div class="bg-slate-900 text-white text-sm p-4 rounded-xl shadow-inner font-mono">
+            <div class="bg-slate-900 text-white text-sm p-4 rounded-xl shadow-inner font-mono border border-slate-700">
               <div class="max-h-80 overflow-auto scrollbar-thin" id="response-content-<%= endpointIndex %>"></div>
             </div>
           </div>
 
           <!-- CURL -->
           <div id="curl-<%= endpointIndex %>" class="hidden mt-6">
-            <div class="text-slate-700 dark:text-slate-200 font-bold text-sm mb-3 flex items-center">
-              <span class="material-icons-outlined text-purple-500 text-sm mr-2">terminal</span> CURL COMMAND
+            <div class="text-eye-safe font-bold text-sm mb-3 flex items-center">
+              <span class="material-icons-outlined text-purple-250 text-sm mr-2">terminal</span> CURL COMMAND
             </div>
-            <div class="bg-slate-900 text-white text-sm p-4 rounded-xl shadow-inner">
+            <div class="bg-slate-900 text-white text-sm p-4 rounded-xl shadow-inner border border-slate-700">
               <pre class="whitespace-pre-wrap overflow-auto max-h-40 scrollbar-thin" id="curl-content-<%= endpointIndex %>"></pre>
             </div>
           </div>
 
           <!-- Status Table -->
           <div class="mt-6">
-            <div class="text-slate-700 dark:text-slate-200 font-bold text-sm mb-3 flex items-center">
-              <span class="material-icons-outlined text-purple-500 text-sm mr-2">list</span> HTTP STATUS CODES
+            <div class="text-eye-safe font-bold text-sm mb-3 flex items-center">
+              <span class="material-icons-outlined text-purple-250 text-sm mr-2">list</span> HTTP STATUS CODES
             </div>
-            <div class="rounded-2xl border border-slate-200/70 bg-white/80 dark:border-slate-700 dark:bg-slate-800/60 shadow-sm">
+            <div class="rounded-2xl border border-purple-350/20 bg-dark-300/80 shadow-sm">
               <div class="overflow-x-auto">
                 <table class="w-full text-sm">
-                  <thead class="bg-slate-50 dark:bg-slate-800/70 border-b border-slate-200 dark:border-slate-700">
+                  <thead class="bg-dark-400 border-b border-purple-350/20">
                     <tr>
-                      <th class="px-4 py-3 text-left font-semibold text-slate-700 dark:text-slate-300">Code</th>
-                      <th class="px-4 py-3 text-left font-semibold text-slate-700 dark:text-slate-300">Description</th>
+                      <th class="px-4 py-3 text-left font-semibold text-eye-safe">Code</th>
+                      <th class="px-4 py-3 text-left font-semibold text-eye-safe">Description</th>
                     </tr>
                   </thead>
-                  <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors">
-                      <td class="px-4 py-3"><div class="flex items-center"><span class="material-icons-outlined text-green-500 text-sm mr-2">check_circle</span><span class="font-mono font-semibold text-green-500">200</span></div></td>
-                      <td class="px-4 py-3">OK - Request successful</td>
+                  <tbody class="divide-y divide-purple-350/10">
+                    <tr class="hover:bg-dark-400/60 transition-colors">
+                      <td class="px-4 py-3"><div class="flex items-center"><span class="material-icons-outlined text-green-400 text-sm mr-2">check_circle</span><span class="font-mono font-semibold text-green-400">200</span></div></td>
+                      <td class="px-4 py-3 text-eye-safe">OK - Request successful</td>
                     </tr>
-                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors">
-                      <td class="px-4 py-3"><div class="flex items-center"><span class="material-icons-outlined text-red-500 text-sm mr-2">error</span><span class="font-mono font-semibold text-red-500">400</span></div></td>
-                      <td class="px-4 py-3">Bad Request - Invalid parameters</td>
+                    <tr class="hover:bg-dark-400/60 transition-colors">
+                      <td class="px-4 py-3"><div class="flex items-center"><span class="material-icons-outlined text-red-400 text-sm mr-2">error</span><span class="font-mono font-semibold text-red-400">400</span></div></td>
+                      <td class="px-4 py-3 text-eye-safe">Bad Request - Invalid parameters</td>
                     </tr>
-                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors">
-                      <td class="px-4 py-3"><div class="flex items-center"><span class="material-icons-outlined text-red-500 text-sm mr-2">error</span><span class="font-mono font-semibold text-red-500">405</span></div></td>
-                      <td class="px-4 py-3">Method Not Allowed</td>
+                    <tr class="hover:bg-dark-400/60 transition-colors">
+                      <td class="px-4 py-3"><div class="flex items-center"><span class="material-icons-outlined text-red-400 text-sm mr-2">error</span><span class="font-mono font-semibold text-red-400">405</span></div></td>
+                      <td class="px-4 py-3 text-eye-safe">Method Not Allowed</td>
                     </tr>
-                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors">
-                      <td class="px-4 py-3"><div class="flex items-center"><span class="material-icons-outlined text-yellow-500 text-sm mr-2">warning</span><span class="font-mono font-semibold text-yellow-500">429</span></div></td>
-                      <td class="px-4 py-3">Too Many Requests</td>
+                    <tr class="hover:bg-dark-400/60 transition-colors">
+                      <td class="px-4 py-3"><div class="flex items-center"><span class="material-icons-outlined text-yellow-400 text-sm mr-2">warning</span><span class="font-mono font-semibold text-yellow-400">429</span></div></td>
+                      <td class="px-4 py-3 text-eye-safe">Too Many Requests</td>
                     </tr>
-                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors">
-                      <td class="px-4 py-3"><div class="flex items-center"><span class="material-icons-outlined text-red-500 text-sm mr-2">error</span><span class="font-mono font-semibold text-red-500">500</span></div></td>
-                      <td class="px-4 py-3">Internal Server Error</td>
+                    <tr class="hover:bg-dark-400/60 transition-colors">
+                      <td class="px-4 py-3"><div class="flex items-center"><span class="material-icons-outlined text-red-400 text-sm mr-2">error</span><span class="font-mono font-semibold text-red-400">500</span></div></td>
+                      <td class="px-4 py-3 text-eye-safe">Internal Server Error</td>
                     </tr>
                   </tbody>
                 </table>
