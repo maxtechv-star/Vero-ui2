@@ -1,11 +1,10 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="<%= description %>">
-  <meta name="theme-color" content="#8b5cf6">
+  <meta name="theme-color" content="#0ea5e9">
   <title><%= title %></title>
 
   <link rel="icon" href="/favicon.ico" type="image/x-icon">
@@ -13,20 +12,9 @@
   <!-- Set theme before paint (anti-flicker) -->
   <script>
     (function () {
-      try {
-        const t = localStorage.getItem('theme');
-        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-        const isDark = t === 'dark' || (t === null && prefersDark);
-        if (isDark) {
-          document.documentElement.classList.add('dark');
-          try { document.documentElement.style.colorScheme = 'dark'; } catch (e) {}
-        } else {
-          document.documentElement.classList.remove('dark');
-          try { document.documentElement.style.colorScheme = 'light'; } catch (e) {}
-        }
-      } catch (e) {
-        /* fail silently so page can still render */
-      }
+      const t = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (t === 'dark' || (!t && prefersDark)) document.documentElement.classList.add('dark');
     })();
   </script>
 
@@ -42,40 +30,18 @@
             mono: ['Ubuntu Mono','ui-monospace','SFMono-Regular']
           },
           colors: {
-            brand: { 
-              300: '#c4b5fd',  // purple-300
-              400: '#a78bfa',  // purple-400  
-              500: '#8b5cf6',  // purple-500
-              600: '#6366f1'   // indigo-500
-            }
+            brand: { 300:'#67e8f9', 400:'#22d3ee', 500:'#06b6d4', 600:'#0891b2' }
           },
           keyframes: {
-            fadeIn: { 
-              '0%': { opacity: 0, transform: 'translateY(6px)' }, 
-              '100%': { opacity: 1, transform: 'translateY(0)' } 
-            },
-            shimmer: { 
-              '0%': { backgroundPosition: '-200% 0' }, 
-              '100%': { backgroundPosition: '200% 0' } 
-            },
-            float: {
-              '0%, 100%': { transform: 'translateY(0)' },
-              '50%': { transform: 'translateY(-5px)' }
-            },
-            glow: {
-              '0%, 100%': { boxShadow: '0 0 20px -5px rgba(139, 92, 246, 0.3)' },
-              '50%': { boxShadow: '0 0 30px -3px rgba(139, 92, 246, 0.5)' }
-            }
+            fadeIn: { '0%':{opacity:0,transform:'translateY(6px)'}, '100%':{opacity:1,transform:'translateY(0)'} },
+            shimmer: { '0%':{backgroundPosition:'-200% 0'}, '100%':{backgroundPosition:'200% 0'} }
           },
           animation: {
-            fadeIn: 'fadeIn .45s ease-out both',
-            shimmer: 'shimmer 2.2s linear infinite',
-            float: 'float 3s ease-in-out infinite',
-            glow: 'glow 2s ease-in-out infinite'
+            fadeIn:'fadeIn .45s ease-out both',
+            shimmer:'shimmer 2.2s linear infinite'
           },
-          backgroundImage: {
-            'light-gradient': 'radial-gradient(1100px 600px at 10% -10%, rgba(139, 92, 246, .08), transparent 60%), radial-gradient(900px 500px at 90% 10%, rgba(59, 130, 246, .08), transparent 60%)',
-            'dark-gradient': 'radial-gradient(1100px 600px at 10% -10%, rgba(139, 92, 246, .15), transparent 60%), radial-gradient(900px 500px at 90% 10%, rgba(59, 130, 246, .15), transparent 60%)'
+          backgroundImage:{
+            'radial-soft':'radial-gradient(1100px 600px at 10% -10%, rgba(14,165,233,.10), transparent 60%), radial-gradient(900px 500px at 90% 10%, rgba(99,102,241,.10), transparent 60%)'
           }
         }
       }
@@ -87,154 +53,41 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Ubuntu+Mono:wght@400;700&display=swap" rel="stylesheet">
 
   <style>
-    /* Gradient button */
-    .gbtn {
-      display: inline-flex;
-      align-items: center;
-      gap: .5rem;
-      padding: .65rem 1.25rem;
-      border-radius: 0.75rem;
-      color: #fff;
-      font-weight: 700;
-      font-size: .75rem;
-      letter-spacing: .02em;
-      background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 50%, #3b82f6 100%);
-      box-shadow: 0 8px 25px rgba(139, 92, 246, 0.25);
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      position: relative;
-      overflow: hidden;
+    /* Gradient button (tanpa @apply) */
+    .gbtn{
+      display:inline-flex;align-items:center;gap:.5rem;padding:.55rem 1rem;border-radius:0.75rem;
+      color:#fff;font-weight:800;font-size:.75rem;letter-spacing:.02em;
+      background-image:linear-gradient(135deg,#22d3ee 0%,#6366f1 50%,#8b5cf6 100%);
+      box-shadow:0 12px 28px rgba(99,102,241,.28); transition:transform .15s ease, filter .15s ease;
     }
+    .gbtn:hover{filter:brightness(1.08); transform:translateY(-1px)}
+    .gbtn:active{transform:translateY(0)}
 
-    .gbtn::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: -100%;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-      transition: left 0.5s;
-    }
-
-    .gbtn:hover::before {
-      left: 100%;
-    }
-
-    .gbtn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 15px 35px rgba(139, 92, 246, 0.35);
-    }
-
-    .gbtn:active {
-      transform: translateY(0);
-    }
-
-    /* Glass morphism effects */
-    .glass {
-      background: rgba(255, 255, 255, 0.25);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.18);
-    }
-
-    .glass-dark {
-      background: rgba(30, 27, 46, 0.7);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(139, 92, 246, 0.15);
-    }
-
-    /* Expand panel animations */
-    .slide-down {
-      animation: slideDown 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-    }
-
-    .slide-up {
-      animation: slideUp 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-    }
-
-    @keyframes slideDown {
-      from {
-        opacity: 0;
-        transform: translateY(-12px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    @keyframes slideUp {
-      from {
-        opacity: 1;
-        transform: translateY(0);
-      }
-      to {
-        opacity: 0;
-        transform: translateY(-12px);
-      }
-    }
-
-    /* Custom scrollbar */
-    ::-webkit-scrollbar {
-      width: 6px;
-    }
-
-    ::-webkit-scrollbar-track {
-      background: rgba(139, 92, 246, 0.1);
-      border-radius: 10px;
-    }
-
-    ::-webkit-scrollbar-thumb {
-      background: linear-gradient(135deg, #8b5cf6, #3b82f6);
-      border-radius: 10px;
-    }
-
-    ::-webkit-scrollbar-thumb:hover {
-      background: linear-gradient(135deg, #7c3aed, #2563eb);
-    }
-
-    /* Gradient text */
-    .gradient-text {
-      background: linear-gradient(135deg, #8b5cf6, #3b82f6);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
+    /* Expand panel */
+    .slide-down{animation:slideDown .18s ease-out}
+    .slide-up{animation:slideUp .18s ease-out}
+    @keyframes slideDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes slideUp{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(-8px)}}
   </style>
 </head>
 
-<body class="min-h-dvh bg-gradient-to-br from-slate-50 via-purple-50/30 to-blue-50/30 bg-light-gradient text-slate-900 antialiased
-             dark:bg-gradient-to-br dark:from-slate-900 dark:via-purple-900/10 dark:to-blue-900/10 dark:bg-dark-gradient dark:text-slate-100">
-  <!-- Animated background elements -->
-  <div class="fixed top-10 left-10 w-20 h-20 bg-purple-400/10 rounded-full blur-xl animate-float dark:bg-purple-400/5"></div>
-  <div class="fixed top-1/3 right-20 w-16 h-16 bg-blue-400/10 rounded-full blur-xl animate-float dark:bg-blue-400/5" style="animation-delay: 1s;"></div>
-  <div class="fixed bottom-20 left-1/3 w-24 h-24 bg-indigo-400/10 rounded-full blur-xl animate-float dark:bg-indigo-400/5" style="animation-delay: 2s;"></div>
-
+<body class="min-h-dvh bg-slate-50 bg-radial-soft text-slate-900 antialiased
+             dark:bg-slate-900 dark:text-slate-100">
   <!-- Theme Toggle -->
-  <button id="themeToggle" class="fixed right-4 top-4 z-50 gbtn animate-glow" aria-label="Toggle theme" aria-pressed="false">
+  <button id="themeToggle" class="fixed right-4 top-4 z-50 gbtn" aria-label="Toggle theme">
     <span class="material-icons-outlined text-[18px]" id="themeIcon">dark_mode</span>
     <span class="hidden sm:inline">Theme</span>
   </button>
   <script>
-    // wait for DOM to be ready so button exists, but initial anti-flicker has already run above
-    document.addEventListener('DOMContentLoaded', function () {
-      const btnTheme = document.getElementById('themeToggle');
-      const iconTheme = document.getElementById('themeIcon');
-
-      function syncThemeIcon() {
-        const isDark = document.documentElement.classList.contains('dark');
-        iconTheme.textContent = isDark ? 'light_mode' : 'dark_mode';
-        btnTheme.setAttribute('aria-pressed', isDark ? 'true' : 'false');
-      }
-
+    const btnTheme = document.getElementById('themeToggle');
+    const iconTheme = document.getElementById('themeIcon');
+    function syncThemeIcon(){ iconTheme.textContent = document.documentElement.classList.contains('dark') ? 'light_mode' : 'dark_mode'; }
+    syncThemeIcon();
+    btnTheme.addEventListener('click', () => {
+      const dark = document.documentElement.classList.toggle('dark');
+      localStorage.setItem('theme', dark ? 'dark' : 'light');
       syncThemeIcon();
-
-      btnTheme.addEventListener('click', () => {
-        const dark = document.documentElement.classList.toggle('dark');
-        try { document.documentElement.style.colorScheme = dark ? 'dark' : 'light'; } catch (e) {}
-        localStorage.setItem('theme', dark ? 'dark' : 'light');
-        syncThemeIcon();
-      });
     });
   </script>
 
-  <main class="mx-auto max-w-6xl px-4 md:px-6 py-8 animate-fadeIn relative z-10">
+  <main class="mx-auto max-w-6xl px-4 md:px-6 py-8 animate-fadeIn">
