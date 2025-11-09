@@ -9,7 +9,11 @@ const yt = {
     get baseHeaders() {
         return {
             'accept-encoding': 'gzip, deflate, br, zstd',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1'
         }
     },
 
@@ -21,106 +25,163 @@ const yt = {
             if (fV.indexOf('/shorts/') > -1) {
                 v = /\/([a-zA-Z0-9\-\_]{11})/.exec(fV)
             } else {
-                v = /v\=([a-zA-Z0-9\-\_]{11})/.exec(fV)
+                v = /v=([a-zA-Z0-9\-\_]{11})/.exec(fV)
             }
         }
         const result = v?.[1]
-        if (!result) throw Error(`Failed to extract video ID`)
+        if (!result) throw Error(`Failed to extract video ID from: ${fV}`)
         return result
     },
 
     getInitUrl: async function () {
         try {
-            const r1 = await fetch(this.url.origin, { headers: this.baseHeaders })
-            const html = await r1.text()
-            const jsPath = html.match(/<script src="(.+?)"/)?.[1]
-            const jsUrl = this.url.origin + jsPath
-            const r2 = await fetch(jsUrl, { headers: this.baseHeaders })
-            const js = await r2.text()
-
-            const gB_m = js.match(/gB=(.+?),gD/)?.[1]
-            const gB = eval(gB_m)
-
-            const html_m = html.match(/<script>(.+?)<\/script>/)?.[1]
-            const hiddenGc = eval(html_m + "gC")
-            const gC = Object.fromEntries(Object.getOwnPropertyNames(hiddenGc).map(key => [key, hiddenGc[key]]))
-
-            const decodeBin = (d) => d.split(' ').map(v => parseInt(v, 2))
-            const decodeHex = (d) => d.match(/0x[a-fA-F0-9]{2}/g).map(v => String.fromCharCode(v)).join("")
-            const getTimestamp = () => Math.floor((new Date).getTime() / 1e3)
-
-            function authorization() {
-                var dec = decodeBin(gC.d(1)[0])
-                var k = ''
-                for (var i = 0; i < dec.length; i++) k += (gC.d(2)[0] > 0) ? atob(gC.d(1)[1]).split('').reverse().join('')[(dec[i] - gC.d(2)[1])] : atob(gC.d(1)[1])[(dec[i] - gC.d(2)[1])]
-                if (gC.d(2)[2] > 0) k = k.substring(0, gC.d(2)[2])
-                switch (gC.d(2)[3]) {
-                    case 0:
-                        return btoa(k + '_' + decodeHex(gC.d(3)[0]))
-                    case 1:
-                        return btoa(k.toLowerCase() + '_' + decodeHex(gC.d(3)[0]))
-                    case 2:
-                        return btoa(k.toUpperCase() + '_' + decodeHex(gC.d(3)[0]))
-                }
+            // First request to get the main page
+            const r1 = await fetch(this.url.origin, { 
+                headers: this.baseHeaders,
+                redirect: 'follow'
+            })
+            
+            if (!r1.ok) {
+                throw new Error(`Failed to fetch main page: ${r1.status} ${r1.statusText}`)
             }
-
-            const api_m = js.matchAll(/};var \S{1}=(.+?);gR&&\(/g)
-            const e = Array.from(api_m)?.[1]?.[1]
-            const apiUrl = eval(`${e}`)
-            return apiUrl
-        } catch (e) {
-            throw new Error('Failed to get API URL')
+            
+            const html = await r1.text()
+            
+            // Extract JavaScript file path
+            const jsPathMatch = html.match(/<script src="(\/js\/app\.[^"]+\.js)"/)
+            if (!jsPathMatch) {
+                throw new Error('Could not find JavaScript file path')
+            }
+            
+            const jsPath = jsPathMatch[1]
+            const jsUrl = this.url.origin + jsPath
+            
+            // Fetch the JavaScript file
+            const r2 = await fetch(jsUrl, { 
+                headers: {
+                    ...this.baseHeaders,
+                    'Referer': this.url.origin
+                }
+            })
+            
+            if (!r2.ok) {
+                throw new Error(`Failed to fetch JS file: ${r2.status} ${r2.statusText}`)
+            }
+            
+            const js = await r2.text()
+            
+            // Try to find API URL in JavaScript
+            const apiUrlMatches = js.match(/convertURL:"([^"]+)"/)
+            if (apiUrlMatches && apiUrlMatches[1]) {
+                return apiUrlMatches[1]
+            }
+            
+            // Alternative pattern matching
+            const altMatches = js.match(/apiUrl:\s*["']([^"']+)["']/)
+            if (altMatches && altMatches[1]) {
+                return altMatches[1]
+            }
+            
+            throw new Error('Could not extract API URL from JavaScript')
+            
+        } catch (error) {
+            console.error('getInitUrl error:', error.message)
+            throw new Error(`Failed to get API URL: ${error.message}`)
         }
     },
 
-    download: async function (url, f = 'mp3') {
+    download: async function (url, f = 'mp4') {
         if (!/^mp3|mp4$/.test(f)) throw Error(`Format must be mp3 or mp4`)
+        
         const v = this.extractVideoId(url)
         const headers = {
             'referer': this.url.origin,
-            ...this.baseHeaders
+            ...this.baseHeaders,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json, text/plain, */*'
         }
-        const initApi = await this.getInitUrl()
-        const r1 = await fetch(initApi, { headers })
-        const j1 = await r1.json()
-        const { convertURL } = j1
-        const convertApi = convertURL + '&v=' + v + '&f=' + f + '&_=' + Math.random()
-        const r2 = await fetch(convertApi, { headers })
-        const j2 = await r2.json()
-        if (j2.error) throw Error(`Error in conversion: ${JSON.stringify(j2, null, 2)}`)
-        if (j2.redirectURL) {
-            const r3 = await fetch(j2.redirectURL, { headers })
-            const j3 = await r3.json()
-            const result = {
-                title: j3.title,
-                downloadURL: j3.downloadURL,
-                format: f,
-                videoId: v
+        
+        try {
+            const initApi = await this.getInitUrl()
+            console.log('Found API URL:', initApi)
+            
+            // First request to initialize conversion
+            const r1 = await fetch(initApi, { headers })
+            if (!r1.ok) {
+                throw new Error(`API request failed: ${r1.status} ${r1.statusText}`)
             }
-            return result
-        } else {
-            let j3b
-            let attempts = 0
-            const maxAttempts = 10
             
-            do {
-                const r3b = await fetch(j2.progressURL, { headers })
-                j3b = await r3b.json()
-                if (j3b.error) throw Error(`Error checking progress: ${JSON.stringify(j3b, null, 2)}`)
-                if (j3b.progress == 3) {
-                    const result = {
-                        title: j3b.title,
-                        downloadURL: j2.downloadURL,
-                        format: f,
-                        videoId: v
-                    }
-                    return result
+            const j1 = await r1.json()
+            const { convertURL } = j1
+            
+            if (!convertURL) {
+                throw new Error('No convertURL found in API response')
+            }
+            
+            // Build conversion URL
+            const convertApi = `${convertURL}&v=${v}&f=${f}&_=${Date.now()}`
+            console.log('Conversion URL:', convertApi)
+            
+            const r2 = await fetch(convertApi, { headers })
+            if (!r2.ok) {
+                throw new Error(`Conversion request failed: ${r2.status} ${r2.statusText}`)
+            }
+            
+            const j2 = await r2.json()
+            
+            if (j2.error) {
+                throw new Error(`API Error: ${j2.error}`)
+            }
+            
+            if (j2.redirectURL) {
+                // Direct download available
+                const r3 = await fetch(j2.redirectURL, { headers })
+                const j3 = await r3.json()
+                
+                return {
+                    title: j3.title || 'Unknown Title',
+                    downloadURL: j3.downloadURL,
+                    format: f,
+                    videoId: v,
+                    duration: j3.duration,
+                    quality: j3.quality
                 }
-                attempts++
-                await new Promise(resolve => setTimeout(resolve, 3000))
-            } while (attempts < maxAttempts)
+            } else if (j2.progressURL) {
+                // Need to wait for conversion
+                let attempts = 0
+                const maxAttempts = 15 // Increased attempts
+                
+                while (attempts < maxAttempts) {
+                    const r3 = await fetch(j2.progressURL, { headers })
+                    const progressData = await r3.json()
+                    
+                    if (progressData.error) {
+                        throw new Error(`Progress error: ${progressData.error}`)
+                    }
+                    
+                    if (progressData.progress === 3) { // 3 typically means completed
+                        return {
+                            title: progressData.title || 'Unknown Title',
+                            downloadURL: j2.downloadURL,
+                            format: f,
+                            videoId: v,
+                            duration: progressData.duration,
+                            quality: progressData.quality
+                        }
+                    }
+                    
+                    attempts++
+                    await new Promise(resolve => setTimeout(resolve, 2000)) // Wait 2 seconds
+                }
+                
+                throw new Error('Conversion timeout - please try again later')
+            } else {
+                throw new Error('Unexpected API response format')
+            }
             
-            throw Error('Conversion timeout - please try again')
+        } catch (error) {
+            console.error('Download error:', error.message)
+            throw error
         }
     }
 }
@@ -130,7 +191,7 @@ let handler = async (res, req) => {
         const { url, format = 'mp4' } = req.query;
         
         if (!url) return res.reply('URL parameter is required.', { code: 400 });
-        if (!/youtube.com|youtu.be/.test(url)) return res.reply('Invalid YouTube URL.', { code: 400 });
+        if (!/youtube\.com|youtu\.be/.test(url)) return res.reply('Invalid YouTube URL.', { code: 400 });
         if (!['mp3', 'mp4'].includes(format)) return res.reply('Format must be mp3 or mp4.', { code: 400 });
         
         const result = await yt.download(url, format);
@@ -142,7 +203,9 @@ let handler = async (res, req) => {
                 downloadUrl: result.downloadURL,
                 format: result.format,
                 videoId: result.videoId,
-                type: format === 'mp3' ? 'audio' : 'video'
+                type: format === 'mp3' ? 'audio' : 'video',
+                duration: result.duration,
+                quality: result.quality
             },
             message: `Successfully processed YouTube video as ${format.toUpperCase()}`
         };
@@ -153,17 +216,29 @@ let handler = async (res, req) => {
         res.reply({
             status: false,
             error: "Download failed",
-            message: error.message || "An error occurred while processing the video"
+            message: error.message || "An error occurred while processing the video",
+            suggestion: "Please try again with a different video or check if the video is available"
         }, { code: 500 });
     }
 };
 
 handler.alias = 'YouTube Downloader';
 handler.category = 'Downloader';
-handler.status = 'working'; // Changed from 'error' to 'working'
+handler.status = 'working';
 handler.params = {
-    url: { desc: 'Input url from youtube.', example: 'https://youtube.com/...' },
-    format: { desc: 'Input format.', options: ['mp3', 'mp4'] } // Updated options
+    url: { 
+        desc: 'YouTube video URL', 
+        example: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+        required: true,
+        type: 'string'
+    },
+    format: { 
+        desc: 'Output format', 
+        options: ['mp3', 'mp4'],
+        required: false,
+        type: 'string',
+        default: 'mp4'
+    }
 };
 
 module.exports = handler;
