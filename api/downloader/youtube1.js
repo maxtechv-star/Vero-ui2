@@ -1,7 +1,5 @@
+
 const axios = require('axios');
-const fs = require('fs');
-const { spawn } = require('child_process');
-const path = require('path');
 
 const yt = {
   static: Object.freeze({
@@ -50,18 +48,34 @@ const yt = {
     return name + ext;
   },
   
-  async getBuffer(u) {
+  async getFileInfo(u) {
     const headers = { ...this.static.headers };
     headers.referer = 'https://v6.www-y2mate.com/';
     headers.range = 'bytes=0-';
     delete headers.origin;
     
-    const response = await axios.get(u, {
-      headers: headers,
-      responseType: 'arraybuffer'
+    // Get file info without downloading the entire file
+    const response = await axios.head(u, {
+      headers: headers
     });
     
-    return Buffer.from(response.data);
+    const contentLength = response.headers['content-length'];
+    const contentType = response.headers['content-type'];
+    
+    return {
+      url: u,
+      size: contentLength ? this.formatBytes(parseInt(contentLength)) : 'Unknown',
+      sizeBytes: contentLength ? parseInt(contentLength) : null,
+      mimeType: contentType || 'application/octet-stream'
+    };
+  },
+  
+  formatBytes(bytes) {
+    if (!bytes) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   },
   
   async getKey() {
@@ -84,54 +98,20 @@ const yt = {
     return response.data;
   },
   
-  async download(u, f) {
+  async getDownloadInfo(u, f) {
     const { url, filename } = await this.convert(u, f);
-    const buffer = await this.getBuffer(url);
+    const fileInfo = await this.getFileInfo(url);
+    
     return { 
       fileName: this.sanitizeFileName(filename), 
-      buffer,
-      mimeType: f.endsWith('k') ? 'audio/mpeg' : 'video/mp4'
+      downloadUrl: url,
+      mimeType: f.endsWith('k') ? 'audio/mpeg' : 'video/mp4',
+      format: f,
+      type: f.endsWith('k') ? 'audio' : 'video',
+      size: fileInfo.size,
+      sizeBytes: fileInfo.sizeBytes,
+      originalUrl: u
     };
-  }
-}
-
-async function convertToFast(buffer) {
-  const tempDir = './temp';
-  if (!fs.existsSync(tempDir)) {
-    fs.mkdirSync(tempDir);
-  }
-  
-  const tempIn = path.join(tempDir, `temp_in_${Date.now()}.mp4`);
-  const tempOut = path.join(tempDir, `temp_out_${Date.now()}.mp4`);
-  
-  try {
-    fs.writeFileSync(tempIn, buffer);
-    
-    await new Promise((resolve, reject) => {
-      const ff = spawn('ffmpeg', [
-        '-i', tempIn, 
-        '-c', 'copy', 
-        '-movflags', 'faststart', 
-        tempOut
-      ]);
-      
-      ff.on('close', code => {
-        if (code === 0) {
-          resolve();
-        } else {
-          reject(new Error(`FFmpeg process exited with code ${code}`));
-        }
-      });
-      
-      ff.on('error', reject);
-    });
-    
-    const newBuffer = fs.readFileSync(tempOut);
-    return newBuffer;
-  } finally {
-    // Clean up temp files
-    try { if (fs.existsSync(tempIn)) fs.unlinkSync(tempIn); } catch (e) {}
-    try { if (fs.existsSync(tempOut)) fs.unlinkSync(tempOut); } catch (e) {}
   }
 }
 
@@ -176,26 +156,17 @@ let handler = async (res, req) => {
       }
     }
 
-    yt.log(`Downloading: ${url} as ${downloadFormat}`);
+    yt.log(`Getting download info: ${url} as ${downloadFormat}`);
     
-    const result = await yt.download(url, downloadFormat);
+    const result = await yt.getDownloadInfo(url, downloadFormat);
     
-    // Convert video to faststart for better streaming
-    if (result.mimeType === 'video/mp4') {
-      try {
-        result.buffer = await convertToFast(result.buffer);
-      } catch (convertError) {
-        yt.log(`FFmpeg conversion failed, using original: ${convertError.message}`);
-        // Continue with original buffer if conversion fails
-      }
-    }
-
-    // Return as downloadable file
-    res.setHeader('Content-Type', result.mimeType);
-    res.setHeader('Content-Disposition', `attachment; filename="${result.fileName}"`);
-    res.setHeader('Content-Length', result.buffer.length);
-    
-    return res.send(result.buffer);
+    return res.reply({
+      success: true,
+      provider: 'youtube-downloader',
+      data: result,
+      message: `YouTube ${result.type} download ready`,
+      timestamp: new Date().toISOString()
+    });
 
   } catch (error) {
     console.error("YouTube Download Error:", error.message);
@@ -206,7 +177,7 @@ let handler = async (res, req) => {
     return res.reply(
       JSON.stringify({
         success: false,
-        error: "Download failed",
+        error: "Download processing failed",
         message: error.message || "An error occurred while processing the video",
         ...(debug ? { detail } : {})
       }),
