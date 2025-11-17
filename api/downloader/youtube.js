@@ -1,216 +1,167 @@
-
-const axios = require('axios');
+const yts = require("yt-search");
 
 const yt = {
-  static: Object.freeze({
-    baseUrl: 'https://cnv.cx',
-    headers: {
-      'accept-encoding': 'gzip, deflate, br, zstd',
-      'origin': 'https://frame.y2meta-uk.com',
-      'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0'
+    url: Object.freeze({
+        audio128: 'https://api.apiapi.lat',
+        video: 'https://api5.apiapi.lat',
+        else: 'https://api3.apiapi.lat',
+        referrer: 'https://ogmp3.pro/'
+    }),
+    encUrl: s => s.split('').map(c => c.charCodeAt()).reverse().join(';'),
+    xor: s => s.split('').map(v => String.fromCharCode(v.charCodeAt() ^ 1)).join(''),
+    genRandomHex: () => Array.from({ length: 32 }, _ => "0123456789abcdef"[Math.floor(Math.random()*16)]).join(""),
+    init: async function (rpObj) {
+        const { apiOrigin, payload } = rpObj
+        const api = apiOrigin + "/" + this.genRandomHex() + "/init/" + this.encUrl(this.xor(payload.data)) + "/" + this.genRandomHex() + "/"
+        const r = await fetch(api, { method: "post", body: JSON.stringify(payload) })
+        if (!r.ok) throw Error(await r.text())
+        return r.json()
+    },
+    genFileUrl: function (i, pk, rpObj) {
+        const { apiOrigin } = rpObj
+        const pkValue = pk ? pk + "/" : ""
+        const downloadUrl = apiOrigin + "/" + this.genRandomHex() + "/download/" + i + "/" + this.genRandomHex() + "/" + pkValue
+        return { downloadUrl }
+    },
+    statusCheck: async function (i, pk, rpObj) {
+        const { apiOrigin } = rpObj
+        let json
+        let count = 0
+        do {
+            await new Promise(r => setTimeout(r, 5000))
+            count++
+            const pkVal = pk ? pk + "/" : ""
+            const api = apiOrigin + "/" + this.genRandomHex() + "/status/" + i + "/" + this.genRandomHex() + "/" + pkVal
+            const r = await fetch(api, {
+                method: "post",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ data: i })
+            })
+            if (!r.ok) throw Error(await r.text())
+            json = await r.json()
+            if (count >= 100) throw Error("pooling mencapai 100, dihentikan")
+        } while (json.s === "P")
+        if (json.s === "E") throw Error(JSON.stringify(json))
+        return this.genFileUrl(i, pk, rpObj)
+    },
+    resolvePayload: function (ytUrl, userFormat) {
+        const valid = ["64k","96k","128k","192k","256k","320k","240p","360p","480p","720p","1080p"]
+        if (!valid.includes(userFormat)) throw Error(`format salah. tersedia: ${valid.join(", ")}`)
+        let apiOrigin = this.url.audio128
+        let data = this.xor(ytUrl)
+        let referer = this.url.referrer
+        let format = "0"
+        let mp3Quality = "128"
+        let mp4Quality = "720"
+        if (/^\d+p$/.test(userFormat)) {
+            apiOrigin = this.url.video
+            format = "1"
+            mp4Quality = userFormat.replace("p","")
+        } else if (userFormat !== "128k") {
+            apiOrigin = this.url.else
+            mp3Quality = userFormat.replace("k","")
+        }
+        return {
+            apiOrigin,
+            payload: {
+                data,
+                format,
+                referer,
+                mp3Quality,
+                mp4Quality,
+                userTimeZone: "-480"
+            }
+        }
+    },
+    download: async function (url, fmt = "128k") {
+        const rpObj = this.resolvePayload(url, fmt)
+        const initObj = await this.init(rpObj)
+        const { i, pk, s } = initObj
+        if (s === "C") return this.genFileUrl(i, pk, rpObj)
+        return this.statusCheck(i, pk, rpObj)
     }
-  }),
-  
-  log(m) { console.log(`[yt-downloader] ${m}`) },
-  
-  resolveConverterPayload(link, f = '128k') {
-    const formats = ['128k', '320k', '144p', '240p', '360p', '720p', '1080p'];
-    if (!formats.includes(f)) throw Error(`Invalid format. Available: ${formats.join(', ')}`);
-    
-    const type = f.endsWith('k') ? 'mp3' : 'mp4';
-    const audioBitrate = type === 'mp3' ? parseInt(f) + '' : '128';
-    const videoQuality = type === 'mp4' ? parseInt(f) + '' : '720';
-    
-    return { 
-      link, 
-      format: type, 
-      audioBitrate: audioBitrate, 
-      videoQuality: videoQuality, 
-      filenameStyle: 'pretty', 
-      vCodec: 'h264' 
-    };
-  },
-  
-  sanitizeFileName(n) {
-    const extMatch = n.match(/\.[^.]+$/);
-    if (!extMatch) return n.replace(/[^A-Za-z0-9]/g, '_').replace(/_+/g, '_').toLowerCase();
-    
-    const ext = extMatch[0];
-    const name = n.replace(new RegExp(`\\${ext}$`), '')
-                 .replace(/[^A-Za-z0-9]/g, '_')
-                 .replace(/_+/g, '_')
-                 .toLowerCase();
-    return name + ext;
-  },
-  
-  async getFileInfo(u) {
-    try {
-      const headers = { ...this.static.headers };
-      headers.referer = 'https://v6.www-y2mate.com/';
-      headers.range = 'bytes=0-';
-      delete headers.origin;
-      
-      const response = await axios.head(u, {
-        headers: headers,
-        timeout: 10000
-      });
-      
-      const contentLength = response.headers['content-length'];
-      const contentType = response.headers['content-type'];
-      
-      return {
-        size: contentLength ? this.formatBytes(parseInt(contentLength)) : 'Unknown',
-        sizeBytes: contentLength ? parseInt(contentLength) : null,
-        mimeType: contentType || 'application/octet-stream'
-      };
-    } catch (error) {
-      // If HEAD request fails, return default info
-      return {
-        size: 'Unknown',
-        sizeBytes: null,
-        mimeType: 'application/octet-stream'
-      };
-    }
-  },
-  
-  formatBytes(bytes) {
-    if (!bytes) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  },
-  
-  async getKey() {
-    const response = await axios.get(this.static.baseUrl + '/v2/sanity/key', {
-      headers: this.static.headers
-    });
-    return response.data;
-  },
-  
-  async convert(u, f) {
-    const { key } = await this.getKey();
-    const payload = this.resolveConverterPayload(u, f);
-    const headers = { key, ...this.static.headers };
-    
-    const response = await axios.post(this.static.baseUrl + '/v2/converter', 
-      new URLSearchParams(payload).toString(),
-      { 
-        headers: { ...headers, 'Content-Type': 'application/x-www-form-urlencoded' },
-        timeout: 30000
-      }
-    );
-    
-    return response.data;
-  },
-  
-  async getDownloadInfo(u, f) {
-    const { url, filename } = await this.convert(u, f);
-    const fileInfo = await this.getFileInfo(url);
-    
-    return { 
-      fileName: this.sanitizeFileName(filename), 
-      downloadUrl: url,
-      mimeType: f.endsWith('k') ? 'audio/mpeg' : 'video/mp4',
-      format: f,
-      type: f.endsWith('k') ? 'audio' : 'video',
-      size: fileInfo.size,
-      sizeBytes: fileInfo.sizeBytes,
-      originalUrl: u,
-      timestamp: new Date().toISOString()
-    };
-  }
-}
-
-let handler = async (res, req) => {
-  try {
-    const { url, format = '720p' } = req.params;
-    const debug = String(req?.query?.debug || '').trim() === '1';
-    
-    if (!url) {
-      return res.reply(
-        JSON.stringify({
-          success: false,
-          error: "URL parameter is required",
-          message: "Please provide a YouTube URL"
-        }),
-        { code: 400 }
-      );
-    }
-
-    // Validate YouTube URL
-    const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com\/(watch\?v=|shorts\/)|youtu\.be\/)([a-zA-Z0-9\-\_]{11})/;
-    if (!youtubeRegex.test(url)) {
-      return res.reply(
-        JSON.stringify({
-          success: false,
-          error: "Invalid YouTube URL",
-          message: "Please provide a valid YouTube URL"
-        }),
-        { code: 400 }
-      );
-    }
-
-    // Validate format
-    const validFormats = ['128k', '320k', '144p', '240p', '360p', '720p', '1080p'];
-    if (!validFormats.includes(format)) {
-      return res.reply(
-        JSON.stringify({
-          success: false,
-          error: "Invalid format",
-          message: `Format must be one of: ${validFormats.join(', ')}`
-        }),
-        { code: 400 }
-      );
-    }
-
-    yt.log(`Getting download info: ${url} as ${format}`);
-    
-    const result = await yt.getDownloadInfo(url, format);
-    
-    return res.reply({
-      success: true,
-      provider: 'youtube-downloader',
-      data: result,
-      message: `YouTube ${result.type} download URL generated successfully`,
-      timestamp: new Date().toISOString()
-    });
-
-  } catch (error) {
-    console.error("YouTube Download Error:", error.message);
-    
-    const status = error?.response?.status || 500;
-    const detail = error?.response?.data || error.message || String(error);
-    
-    return res.reply(
-      JSON.stringify({
-        success: false,
-        error: "Download processing failed",
-        message: error.message || "An error occurred while processing the video",
-        ...(debug ? { detail } : {})
-      }),
-      { code: status }
-    );
-  }
 };
 
+const handler = async (res, req) => {
+    try {
+        const { query, format = "128k" } = req.query;
+        
+        if (!query) {
+            return res.reply({
+                message: "Query parameter is required",
+                usage: "Send a search query to find YouTube videos"
+            }, { code: 400 });
+        }
+
+        // Search for videos
+        const searchResults = await yts(query);
+        
+        if (!searchResults.videos || searchResults.videos.length === 0) {
+            return res.reply({
+                message: "No videos found for the given query",
+                query: query
+            }, { code: 404 });
+        }
+
+        const video = searchResults.videos[0];
+        
+        // Get download URL
+        const downloadInfo = await yt.download(video.url, format);
+        
+        const result = {
+            success: true,
+            video: {
+                title: video.title,
+                description: video.description,
+                duration: video.duration.toString(),
+                timestamp: video.timestamp,
+                views: video.views,
+                thumbnail: video.thumbnail,
+                author: {
+                    name: video.author.name,
+                    url: video.author.url
+                },
+                url: video.url,
+                uploaded: video.ago
+            },
+            download: {
+                format: format,
+                downloadUrl: downloadInfo.downloadUrl,
+                type: format.includes('k') ? 'audio' : 'video',
+                quality: format
+            }
+        };
+
+        res.reply(result);
+        
+    } catch (error) {
+        console.error('YouTube Download Error:', error);
+        res.reply({
+            message: "Failed to process YouTube download",
+            error: error.message
+        }, { code: 500 });
+    }
+};
+
+// API Configuration
 handler.alias = 'YouTube Downloader';
-handler.category = 'downloader';
+handler.category = 'Downloader';
+handler.status = 'ready';
 handler.method = 'GET';
 handler.params = {
-  url: { 
-    desc: 'YouTube video URL', 
-    required: true,
-    type: 'string',
-    example: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
-  },
-  format: { 
-    desc: 'Download format - Audio: 128k, 320k | Video: 144p, 240p, 360p, 720p, 1080p', 
-    required: false,
-    type: 'string',
-    options: ['128k', '320k', '144p', '240p', '360p', '720p', '1080p'],
-    example: '720p'
-  }
+    query: {
+        desc: 'Search query or YouTube URL',
+        required: true,
+        example: 'never gonna give you up',
+        type: 'string'
+    },
+    format: {
+        desc: 'Download format quality',
+        required: false,
+        type: 'string',
+        options: ['64k', '96k', '128k', '192k', '256k', '320k', '240p', '360p', '480p', '720p', '1080p'],
+        example: '128k'
+    }
 };
 
 module.exports = handler;
