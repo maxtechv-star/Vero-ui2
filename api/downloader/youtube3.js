@@ -13,7 +13,7 @@ let handler = async (res, req) => {
 };
 
 handler.alias = 'YouTube Downloader';
-handler.category = 'Downloader';
+handler.category = 'downloader';
 handler.status = 'ready'; 
 handler.params = {
     url: { desc: 'Input url from youtube.', example: 'https://youtube.com/...' },
