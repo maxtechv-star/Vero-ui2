@@ -158,7 +158,7 @@ let handler = async (res, req) => {
 };
 
 handler.alias = 'MediaFire Downloader';
-handler.category = 'downloader';
+handler.category = 'Downloader';
 handler.method = 'GET';
 handler.params = {
     url: { 
