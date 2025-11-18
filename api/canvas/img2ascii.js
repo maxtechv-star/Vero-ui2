@@ -1,3 +1,4 @@
+
 const axios = require('axios');
 const cheerio = require('cheerio');
 const FormData = require('form-data');
@@ -40,27 +41,41 @@ async function img2ascii(buffer, { width = '100' } = {}) {
     }
 }
 
-const handler = async (res, req) => {
+// Main handler function
+const run = async (res, req) => {
     try {
-        const { width = '100', url } = req.method === 'POST' ? (req.body || {}) : req.query;
+        let width, url;
         
+        // Handle both GET and POST methods
+        if (req.method === 'POST') {
+            // For POST: check file upload first, then body, then query
+            if (req.file) {
+                width = req.body?.width || req.query?.width || '100';
+            } else if (req.body && typeof req.body === 'object') {
+                width = req.body.width || req.query?.width || '100';
+                url = req.body.url;
+            } else {
+                width = req.query?.width || '100';
+                url = req.query?.url;
+            }
+        } else {
+            // For GET: only use query parameters
+            width = req.query?.width || '100';
+            url = req.query?.url;
+        }
+
         // Check if file is uploaded or URL is provided
         if (!req.file && !url) {
             return res.reply({
                 message: "Image file or URL is required",
                 usage: {
-                    post_file_upload: "POST /canvas/img2ascii with multipart/form-data containing 'image' file",
-                    post_json: "POST /canvas/img2ascii with JSON body: { \"url\": \"https://...\", \"width\": 100 }",
+                    post_file_upload: "POST /canvas/img2ascii with 'image' file in form-data",
+                    post_json: "POST /canvas/img2ascii with JSON: {\"url\": \"https://...\", \"width\": 100}",
                     get_url: "GET /canvas/img2ascii?url=https://example.com/image.jpg&width=80"
                 },
                 parameters: {
-                    width: "ASCII art width (default: 100, range: 50-200)",
+                    width: "ASCII art width (50-200, default: 100)",
                     url: "Image URL to convert"
-                },
-                examples: {
-                    curl_file: "curl -X POST -F 'image=@image.jpg' -F 'width=100' http://your-api/canvas/img2ascii",
-                    curl_url_post: "curl -X POST -H 'Content-Type: application/json' -d '{\"url\":\"https://example.com/image.jpg\",\"width\":80}' http://your-api/canvas/img2ascii",
-                    curl_url_get: "curl -X GET 'http://your-api/canvas/img2ascii?url=https://example.com/image.jpg&width=80'"
                 }
             }, { code: 400 });
         }
@@ -68,23 +83,22 @@ const handler = async (res, req) => {
         let imageBuffer;
 
         if (req.file) {
-            // Use uploaded file from POST multipart/form-data
+            // Use uploaded file
             imageBuffer = req.file.buffer;
         } else if (url) {
-            // Download image from URL (works for both GET and POST)
+            // Download image from URL
             try {
                 imageBuffer = await res.getBuffer(url, { 
                     mime: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'],
                     headers: {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
                     }
                 });
             } catch (error) {
                 return res.reply({
                     message: "Failed to download image from URL",
                     error: error.message,
-                    url: url,
-                    suggestion: "Check if the URL is accessible and points to a valid image file"
+                    url: url
                 }, { code: 400 });
             }
         }
@@ -95,8 +109,7 @@ const handler = async (res, req) => {
             return res.reply({
                 message: "Width must be a number between 50 and 200",
                 provided: width,
-                allowed_range: "50-200",
-                default: 100
+                allowed_range: "50-200"
             }, { code: 400 });
         }
 
@@ -104,7 +117,7 @@ const handler = async (res, req) => {
         const asciiArt = await img2ascii(imageBuffer, { width: widthNum.toString() });
 
         // Return the result
-        const response = {
+        res.reply({
             success: true,
             result: asciiArt,
             metadata: {
@@ -112,75 +125,53 @@ const handler = async (res, req) => {
                 source: req.file ? 'file_upload' : 'url',
                 lines: asciiArt.split('\n').length,
                 characters: asciiArt.length,
-                method: req.method,
-                input: req.file ? `file: ${req.file.originalname}` : `url: ${url}`
+                method: req.method
             },
             preview: asciiArt.length > 500 ? 
-                `First 500 characters:\n\`\`\`\n${asciiArt.slice(0, 500)}...\n\`\`\`` : 
-                `Full result:\n\`\`\`\n${asciiArt}\n\`\`\``
-        };
-
-        res.reply(response);
+                `First 500 characters (full result has ${asciiArt.length} chars):\n\`\`\`\n${asciiArt.slice(0, 500)}...\n\`\`\`` : 
+                `Full result (${asciiArt.length} characters):\n\`\`\`\n${asciiArt}\n\`\`\``
+        });
         
     } catch (error) {
         console.error('Image to ASCII Error:', error);
         res.reply({
             message: "Failed to convert image to ASCII art",
             error: error.message,
-            method: req.method,
-            input_type: req.file ? 'file_upload' : 'url',
             suggestion: [
                 "Ensure the image is valid and accessible",
-                "Try a different width value between 50-200",
-                "Check if the image format is supported (JPEG, PNG, GIF, WebP, BMP)",
-                "For large images, try a smaller width value"
+                "Try a different width value (50-200)",
+                "Check if the image format is supported"
             ]
         }, { code: 500 });
     }
 };
 
-// API Configuration for both GET and POST
-const apiConfig = {
-    alias: 'Image to ASCII Art Converter',
+// API Configuration
+const config = {
+    alias: 'Image to ASCII Art',
     category: 'canvas',
     status: 'ready',
-    method: ['GET', 'POST'], // Support both methods
-    acceptFiles: true, // Enable file uploads for POST
+    method: 'POST', // Primary method for loader registration
+    acceptFiles: true,
     params: {
         width: {
-            desc: 'Width of the ASCII art (50-200 characters)',
+            desc: 'Width of ASCII art (50-200)',
             required: false,
             type: 'number',
             example: 100,
-            default: 100,
-            min: 50,
-            max: 200
+            default: 100
         },
         url: {
-            desc: 'Image URL to convert (alternative to file upload)',
+            desc: 'Image URL (alternative to file upload)',
             required: false,
             type: 'string',
-            example: 'https://example.com/image.jpg',
-            formats: ['JPEG', 'PNG', 'GIF', 'WebP', 'BMP']
-        }
-    },
-    body: {
-        desc: 'JSON body for POST requests (alternative to file upload)',
-        example: {
-            url: "https://example.com/image.jpg",
-            width: 80
-        }
-    },
-    formData: {
-        desc: 'Multipart form data for POST requests',
-        fields: {
-            image: "file (required) - Image file to convert",
-            width: "number (optional) - Width of ASCII art (50-200)"
+            example: 'https://example.com/image.jpg'
         }
     }
 };
 
-// Apply configuration to handler
-Object.assign(handler, apiConfig);
-
-module.exports = handler;
+// Export both run function and config
+module.exports = {
+    run,
+    ...config
+};
