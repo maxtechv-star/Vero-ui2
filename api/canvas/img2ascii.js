@@ -142,7 +142,7 @@ const handler = async (res, req) => {
 // API Configuration for both GET and POST
 const apiConfig = {
     alias: 'Image to ASCII Art Converter',
-    category: 'Canvas',
+    category: 'canvas',
     status: 'ready',
     method: ['GET', 'POST'], // Support both methods
     acceptFiles: true, // Enable file uploads for POST
