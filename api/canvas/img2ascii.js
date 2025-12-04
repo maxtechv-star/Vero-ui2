@@ -149,7 +149,7 @@ const run = async (res, req) => {
 // API Configuration
 const config = {
     alias: 'Image to ASCII Art',
-    category: 'canvas',
+    category: 'Canvas',
     status: 'ready',
     method: 'POST', // Primary method for loader registration
     acceptFiles: true,
