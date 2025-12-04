@@ -92,7 +92,7 @@ let handler = async (res, req) => {
 };
 
 handler.alias = 'Lyrics Search';
-handler.category = 'search';
+handler.category = 'Search';
 handler.method = 'GET';
 handler.params = {
     query: { 
