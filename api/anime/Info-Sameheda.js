@@ -1,5 +1,6 @@
 const src = require('../../lib/scrape_file/anime/Sameheda');
 
+
 let handler = async (res, req) => {
   try {
     const { text } = req.query || {};
@@ -16,7 +17,7 @@ let handler = async (res, req) => {
 handler.alias = 'Samehadaku Covers';
 handler.category = 'Anime';
 handler.params = {
-  text: { desc: 'Search keywords', example: 'One Piece' }
+  text: { desc: 'Kata kunci pencarian', example: 'One Piece' }
 };
 
 module.exports = handler;

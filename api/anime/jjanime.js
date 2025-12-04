@@ -6,7 +6,7 @@ let handler = async (res, req) => {
     const result = await src.randomJJAnime();
     res.reply({
       success: true,
-      keyword: 'bouncing anime',
+      keyword: 'jedag jedug anime',
       count: result.length,
       result
     });
@@ -17,6 +17,6 @@ let handler = async (res, req) => {
 
 handler.alias = 'JJ Anime Random';
 handler.category = 'Anime';
-handler.params = {}; // no input needed
+handler.params = {}; // tidak butuh input
 
 module.exports = handler;

@@ -32,7 +32,7 @@ let handler = async (res, req) => {
 handler.alias = 'MyAnimeList Search';
 handler.category = 'Anime';
 handler.params = {
-  text: { desc: 'Anime title to search for', example: 'One Piece' },
+  text: { desc: 'Judul anime untuk dicari', example: 'One Piece' },
 };
 
 module.exports = handler;
