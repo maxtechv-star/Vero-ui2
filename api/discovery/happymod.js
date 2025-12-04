@@ -100,7 +100,7 @@ const handler = async (res, req) => {
 
 // API Configuration
 handler.alias = 'HappyMod Search';
-handler.category = 'discovery';
+handler.category = 'Discovery';
 handler.status = 'ready';
 handler.method = 'GET';
 handler.params = {
