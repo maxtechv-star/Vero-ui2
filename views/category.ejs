@@ -232,17 +232,8 @@
 
           <!-- Response -->
           <div id="response-<%= endpointIndex %>" class="hidden mt-4">
-            <div class="flex items-center justify-between mb-2">
-              <div class="text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center">
-                <span class="material-icons-outlined text-sm mr-1">code</span> RESPONSE
-              </div>
-              <button 
-                onclick="copyResponse(<%= endpointIndex %>)" 
-                class="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
-                title="Copy response to clipboard">
-                <span class="material-icons-outlined text-sm">content_copy</span>
-                Copy
-              </button>
+            <div class="text-slate-700 dark:text-slate-200 font-bold text-xs mb-2 flex items-center">
+              <span class="material-icons-outlined text-sm mr-1">code</span> RESPONSE
             </div>
             <div class="bg-slate-900 text-white text-xs p-4 rounded-xl">
               <div class="max-h-80 overflow-auto" id="response-content-<%= endpointIndex %>"></div>
@@ -256,6 +247,47 @@
             </div>
             <div class="bg-slate-900 text-white text-xs p-4 rounded-xl">
               <pre class="whitespace-pre-wrap overflow-auto max-h-40" id="curl-content-<%= endpointIndex %>"></pre>
+            </div>
+          </div>
+
+          <!-- Status Table -->
+          <div class="mt-4">
+            <div class="text-slate-700 dark:text-slate-200 font-bold text-xs mb-2 flex items-center">
+              <span class="material-icons-outlined text-sm mr-1">list</span> HTTP STATUS CODES
+            </div>
+            <div class="rounded-2xl border border-slate-200/70 bg-white/80 dark:border-slate-700 dark:bg-slate-800/60">
+              <div class="overflow-x-auto">
+                <table class="w-full text-xs">
+                  <thead class="bg-slate-50 dark:bg-slate-800/70 border-b border-slate-200 dark:border-slate-700">
+                    <tr>
+                      <th class="px-4 py-2 text-left font-semibold">Code</th>
+                      <th class="px-4 py-2 text-left font-semibold">Description</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
+                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/70">
+                      <td class="px-4 py-2"><div class="flex items-center"><span class="material-icons-outlined text-green-500 text-sm mr-2">check_circle</span><span class="font-mono font-semibold text-green-500">200</span></div></td>
+                      <td class="px-4 py-2">OK - Request successful</td>
+                    </tr>
+                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/70">
+                      <td class="px-4 py-2"><div class="flex items-center"><span class="material-icons-outlined text-red-500 text-sm mr-2">error</span><span class="font-mono font-semibold text-red-500">400</span></div></td>
+                      <td class="px-4 py-2">Bad Request - Invalid parameters</td>
+                    </tr>
+                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/70">
+                      <td class="px-4 py-2"><div class="flex items-center"><span class="material-icons-outlined text-red-500 text-sm mr-2">error</span><span class="font-mono font-semibold text-red-500">405</span></div></td>
+                      <td class="px-4 py-2">Method Not Allowed</td>
+                    </tr>
+                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/70">
+                      <td class="px-4 py-2"><div class="flex items-center"><span class="material-icons-outlined text-yellow-500 text-sm mr-2">warning</span><span class="font-mono font-semibold text-yellow-500">429</span></div></td>
+                      <td class="px-4 py-2">Too Many Requests</td>
+                    </tr>
+                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/70">
+                      <td class="px-4 py-2"><div class="flex items-center"><span class="material-icons-outlined text-red-500 text-sm mr-2">error</span><span class="font-mono font-semibold text-red-500">500</span></div></td>
+                      <td class="px-4 py-2">Internal Server Error</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
 
@@ -292,23 +324,6 @@
     setTimeout(()=>{ r.classList.add('hidden'); r.classList.remove('slide-up','slide-down'); rc.innerHTML='';
                      c.classList.add('hidden'); c.classList.remove('slide-up','slide-down'); cc.textContent='';
                      btn.classList.add('hidden'); },180);
-  }
-
-  function copyResponse(i) {
-    const responseContent = document.getElementById(`response-content-${i}`);
-    const textToCopy = responseContent.innerText || responseContent.textContent;
-    
-    navigator.clipboard.writeText(textToCopy).then(() => {
-      // Optional: Show a brief "Copied!" feedback
-      const copyButton = event.target.closest('button');
-      const originalText = copyButton.innerHTML;
-      copyButton.innerHTML = '<span class="material-icons-outlined text-sm">check</span>Copied!';
-      setTimeout(() => {
-        copyButton.innerHTML = originalText;
-      }, 2000);
-    }).catch(err => {
-      console.error('Failed to copy text: ', err);
-    });
   }
 
   async function executeRequest(e, i, method, path, contentType){
@@ -357,7 +372,7 @@
           cfg.data = nfd; cfg.headers['Content-Type']='multipart/form-data';
           curl += ` \\\n  ${fields.join(' \\\n  ')}`;
         }else if(contentType==='application/json'){
-          // NEW: support JSON or text/plain from textarea
+          // NEW: dukung JSON atau text/plain dari textarea
           const txt = form.querySelector('textarea[name="body"]');
           if (txt && txt.value.trim()){
             const raw = txt.value.trim();
@@ -384,7 +399,7 @@
             }
           }
         }else{
-          // other fallback → send as simple JSON
+          // fallback lain → kirim sebagai JSON sederhana
           const jsonBody = {};
           for (let [k,v] of fd.entries()){
             if (k!=='body' && !k.startsWith('route_') && v) jsonBody[k]=v;
