@@ -1,8 +1,9 @@
-const src = require('../../lib/scrape_file/downloader/ogmp3');
+
+const src = require('../../lib/scrape_file/downloader/y2mate');
 
 let handler = async (res, req) => {
   try {
-    const { url, format = '128k' } = req.query || {};
+    const { url, format = 'mp3' } = req.query || {};
     const { ytUrl, quality } = req.body || {};
 
     // Check if URL is provided
@@ -18,8 +19,39 @@ let handler = async (res, req) => {
       );
     }
 
-    // Use provided format or quality, default to '128k'
-    const formatToUse = format || quality || '128k';
+    // Validate YouTube URL
+    if (!ytUrlToUse.includes('youtube.com') && !ytUrlToUse.includes('youtu.be')) {
+      return res.reply(
+        {
+          success: false,
+          message: 'Invalid YouTube URL. Must be from youtube.com or youtu.be',
+        },
+        { code: 400 }
+      );
+    }
+
+    // Use provided format or quality, default to 'mp3'
+    // Convert quality to format if needed
+    let formatToUse = format;
+    if (quality) {
+      // If quality is like '720p', use mp4 format
+      if (quality.includes('p')) {
+        formatToUse = 'mp4';
+      } else if (quality.includes('k')) {
+        formatToUse = 'mp3';
+      }
+    }
+
+    // Validate format
+    if (formatToUse !== 'mp3' && formatToUse !== 'mp4') {
+      return res.reply(
+        {
+          success: false,
+          message: 'Format must be either "mp3" or "mp4"',
+        },
+        { code: 400 }
+      );
+    }
 
     const data = await src(ytUrlToUse, formatToUse);
 
@@ -36,19 +68,20 @@ let handler = async (res, req) => {
   }
 };
 
-handler.alias = 'YouTube Downloader (OGMP3)';
+handler.alias = 'YouTube Downloader (Y2Mate)';
 handler.category = 'Downloader';
 handler.method = 'GET'; // Support both GET and POST
 handler.params = {
   url: {
-    desc: 'YouTube video URL (for GET requests)',
+    desc: 'YouTube video URL (for GET requests). Supports: youtube.com, youtu.be, YouTube Shorts',
     example: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
     required: false,
     type: 'string'
   },
   format: {
-    desc: 'Output format/quality. Available: 64k, 96k, 128k, 192k, 256k, 320k, 240p, 360p, 480p, 720p, 1080p (default: 128k)',
-    example: '720p',
+    desc: 'Output format: mp3 (audio) or mp4 (video)',
+    example: 'mp4',
+    options: ['mp3', 'mp4'],
     required: false,
     type: 'string'
   }
@@ -57,14 +90,14 @@ handler.params = {
 // Also support POST requests
 handler.body = {
   ytUrl: {
-    desc: 'YouTube video URL (for POST requests)',
+    desc: 'YouTube video URL (for POST requests). Supports: youtube.com, youtu.be, YouTube Shorts',
     example: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
     required: true,
     type: 'string'
   },
   quality: {
-    desc: 'Output format/quality. Available: 64k, 96k, 128k, 192k, 256k, 320k, 240p, 360p, 480p, 720p, 1080p (default: 128k)',
-    example: '720p',
+    desc: 'Output quality hint: use mp3 for audio, mp4 for video (format parameter takes priority)',
+    example: 'mp4',
     required: false,
     type: 'string'
   }
