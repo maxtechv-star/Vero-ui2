@@ -1,87 +1,65 @@
-
-const src = require('../../lib/scrape_file/downloader/ytmp3');
+const ytdl = require('../../lib/scrape_file/downloader/ytd');
 
 let handler = async (res, req) => {
-  try {
-    const { url, format = 'mp3' } = req.query || {};
-    const { ytUrl, f } = req.body || {};
-
-    // Check if URL is provided
-    const ytUrlToUse = url || ytUrl;
-    
-    if (!ytUrlToUse) {
-      return res.reply(
-        {
-          success: false,
-          message: 'YouTube URL is required. Provide either "url" query parameter or "ytUrl" in body.',
-        },
-        { code: 400 }
-      );
+    try {
+        const { url, format } = req.query;
+        
+        // Validate URL
+        if (!url) return res.reply('URL parameter is required.', { code: 400 });
+        
+        // Validate format
+        const validFormats = ['mp3', 'mp4'];
+        if (!validFormats.includes(format)) {
+            return res.reply(`Invalid format. Available formats: ${validFormats.join(', ')}`, { code: 400 });
+        }
+        
+        // Process the YouTube download
+        const yt = new ytdl();
+        const result = await yt.process(url, format);
+        
+        // Handle different response formats
+        if (result.status === false) {
+            return res.reply(result.msg || 'Download failed', { code: 500 });
+        }
+        
+        // Return successful response
+        res.reply({
+            success: true,
+            title: result.title || 'Unknown',
+            type: format,
+            downloadUrl: result.dl,
+            cached: result.cached,
+            note: format === 'mp4' ? 'Video may be in 720p or 1080p quality' : 'Audio is 128kbps MP3'
+        });
+        
+    } catch (error) {
+        res.reply(error.message || 'Internal server error', { code: 500 });
     }
-
-    // Use provided format, default to 'mp3'
-    const formatToUse = format || f || 'mp3';
-
-    // Validate format
-    if (!['mp3', 'mp4'].includes(formatToUse.toLowerCase())) {
-      return res.reply(
-        {
-          success: false,
-          message: 'Invalid format. Use "mp3" for audio or "mp4" for video.',
-        },
-        { code: 400 }
-      );
-    }
-
-    const data = await src(ytUrlToUse, formatToUse);
-
-    // Return appropriate response
-    return res.reply(data, { code: data.success ? 200 : 500 });
-  } catch (e) {
-    return res.reply(
-      {
-        success: false,
-        message: e?.message || String(e),
-      },
-      { code: 500 }
-    );
-  }
 };
 
-handler.alias = 'YouTube Downloader (YTMP3.CX)';
+handler.alias = 'YouTube Downloader';
 handler.category = 'Downloader';
-handler.method = 'GET'; // Support both GET and POST
+handler.status = 'ready'; // Changed from 'error' to 'ready'
+handler.method = 'GET';
 handler.params = {
-  url: {
-    desc: 'YouTube video URL (for GET requests). Supports regular YouTube, Shorts, and Music',
-    example: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-    required: false,
-    type: 'string'
-  },
-  format: {
-    desc: 'Output format: mp3 (audio) or mp4 (video). Default: mp3',
-    example: 'mp4',
-    required: false,
-    type: 'string',
-    options: ['mp3', 'mp4']
-  }
+    url: { 
+        desc: 'YouTube video URL (watch, shorts, embed, or youtu.be)', 
+        example: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+        required: true 
+    },
+    format: { 
+        desc: 'Output format', 
+        options: ['mp3', 'mp4'],
+        required: true,
+        example: 'mp3'
+    }
 };
-
-// Also support POST requests
-handler.body = {
-  ytUrl: {
-    desc: 'YouTube video URL (for POST requests). Supports regular YouTube, Shorts, and Music',
-    example: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-    required: true,
-    type: 'string'
-  },
-  f: {
-    desc: 'Output format: mp3 (audio) or mp4 (video). Default: mp3',
-    example: 'mp4',
-    required: false,
-    type: 'string',
-    options: ['mp3', 'mp4']
-  }
-};
+handler.notes = [
+    'Maximum video length: 30 minutes',
+    'Videos longer than 30 minutes will be rejected',
+    'MP4 videos are typically 720p or 1080p quality',
+    'MP3 audio is 128kbps quality',
+    'First request may take longer due to processing'
+];
 
 module.exports = handler;
