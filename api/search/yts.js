@@ -6,28 +6,22 @@ let handler = async (res, req) => {
         const debug = String(req?.query?.debug || '').trim() === '1';
         
         if (!query) {
-            return res.reply(
-                JSON.stringify({
-                    success: false,
-                    error: "Query parameter is required",
-                    message: "Please provide a search query"
-                }),
-                { code: 400 }
-            );
+            return res.reply({
+                success: false,
+                error: "Query parameter is required",
+                message: "Please provide a search query"
+            }, { code: 400 });
         }
 
         const searchResults = await yts({ query: query });
         let videos = searchResults.videos.slice(0, parseInt(limit) || 10);
 
         if (videos.length === 0) {
-            return res.reply(
-                JSON.stringify({
-                    success: false,
-                    error: "No results found",
-                    message: `No YouTube results found for "${query}"`
-                }),
-                { code: 404 }
-            );
+            return res.reply({
+                success: false,
+                error: "No results found",
+                message: `No YouTube results found for "${query}"`
+            }, { code: 404 });
         }
 
         const results = videos.map(video => ({
@@ -46,25 +40,20 @@ let handler = async (res, req) => {
             success: true,
             data: results,
             count: results.length,
-            query: query,
-            message: `Found ${results.length} YouTube results for "${query}"`
+            query: query
         });
 
     } catch (error) {
         console.error("YouTube Search Error:", error.message);
         
         const status = error?.response?.status || 500;
-        const detail = error.message || String(error);
         
-        return res.reply(
-            JSON.stringify({
-                success: false,
-                error: "Search failed",
-                message: error.message || "An error occurred while searching YouTube",
-                ...(debug ? { detail } : {})
-            }),
-            { code: status }
-        );
+        return res.reply({
+            success: false,
+            error: "Search failed",
+            message: error.message || "An error occurred while searching YouTube",
+            ...(debug ? { detail: error.message } : {})
+        }, { code: status });
     }
 };
 
