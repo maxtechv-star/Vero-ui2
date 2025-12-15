@@ -30,6 +30,7 @@ let handler = async (res, req) => {
 };
 
 handler.alias = 'YouTube Downloader';
+handler.status = 'error';
 handler.category = 'Downloader';
 handler.params = {
   url: {
