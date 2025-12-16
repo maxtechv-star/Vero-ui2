@@ -163,7 +163,7 @@ let handler = async (res, req) => {
 handler.alias = 'Instagram Downloader';
 handler.category = 'Downloader';
 handler.method = 'GET';
-handler.status = 'ready';
+handler.status = 'error';
 handler.params = {
     url: { 
         desc: 'Instagram post URL (supports posts, reels, IGTV, stories)', 
