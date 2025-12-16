@@ -1,147 +1,163 @@
 const axios = require('axios');
-
-async function igee_deel(url) {
-  try {
-    const endpoint = 'https://igram.website/content.php?url=' + encodeURIComponent(url);
-
-    const { data } = await axios.post(endpoint, '', {
-      headers: {
-        authority: 'igram.website',
-        accept: '*/*',
-        'accept-language': 'id-ID,id;q=0.9',
-        'content-type': 'application/x-www-form-urlencoded',
-        cookie: '',
-        referer: 'https://igram.website/',
-        'sec-ch-ua': '"Chromium";v="139", "Not;A=Brand";v="99"',
-        'sec-ch-ua-mobile': '?1',
-        'sec-ch-ua-platform': '"Android"',
-        'user-agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Mobile Safari/537.36'
-      }
-    });
-
-    return data;
-  } catch (e) {
-    return { error: e.message };
-  }
-}
-
-function parse(html) {
-  const clean = html.replace(/\n|\t/g, '');
-
-  const videoMatch = [...clean.matchAll(/<source src="([^"]+)/g)].map(x => x[1]);
-  let imageMatch = [...clean.matchAll(/<img src="([^"]+)/g)].map(x => x[1]);
-
-  if (imageMatch.length > 0) imageMatch = imageMatch.slice(1);
-
-  const captionRaw = clean.match(/<p class="text-sm"[^>]*>(.*?)<\/p>/);
-  const caption = captionRaw ? captionRaw[1].replace(/<br ?\/?>/g, '\n') : '';
-
-  const likes = clean.match(/far fa-heart"[^>]*><\/i>\s*([^<]+)/);
-  const comments = clean.match(/far fa-comment"[^>]*><\/i>\s*([^<]+)/);
-  const time = clean.match(/far fa-clock"[^>]*><\/i>\s*([^<]+)/);
-
-  return {
-    is_video: videoMatch.length > 0,
-    videos: videoMatch,
-    images: imageMatch,
-    caption,
-    likes: likes ? likes[1] : null,
-    comments: comments ? comments[1] : null,
-    time: time ? time[1] : null
-  };
-}
-
-async function instagram(url) {
-  const raw = await igee_deel(url);
-  if (!raw || !raw.html) return { error: 'scrape_failed' };
-
-  const parsed = parse(raw.html);
-
-  return {
-    status: raw.status,
-    username: raw.username,
-    type: parsed.is_video ? 'video' : 'image',
-    video_url: parsed.is_video && parsed.videos.length > 0 ? parsed.videos[0] : null,
-    images: parsed.is_video ? [] : parsed.images,
-    caption: parsed.caption,
-    likes: parsed.likes,
-    comments: parsed.comments,
-    time: parsed.time
-  };
-}
+const cheerio = require('cheerio');
 
 let handler = async (res, req) => {
-  try {
-    const { url } = req.query;
-    
-    // Validate URL
-    if (!url) {
-      return res.reply('URL parameter is required.', { code: 400 });
+    try {
+        const { url } = req.query;
+        
+        if (!url) {
+            return res.reply({
+                success: false,
+                error: "URL parameter is required",
+                message: "Please provide an Instagram URL"
+            }, { code: 400 });
+        }
+
+        // Validate Instagram URL
+        const instagramPattern = /^https?:\/\/(www\.)?instagram\.com\/(p|reel|tv|stories)\/[a-zA-Z0-9_-]+\/?/i;
+        if (!instagramPattern.test(url)) {
+            return res.reply({
+                success: false,
+                error: "Invalid Instagram URL",
+                message: "Supported formats: posts, reels, IGTV, stories"
+            }, { code: 400 });
+        }
+
+        const form = new URLSearchParams({ 
+            url: url + "&lang=en" 
+        });
+        
+        const headers = { 
+            "Content-Type": "application/x-www-form-urlencoded",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        };
+        
+        const response = await axios.post("https://api.downloadgram.app/media", form, { 
+            headers,
+            timeout: 30000
+        });
+
+        // Extract HTML from response
+        let html = "";
+        if (typeof response.data === 'string') {
+            const match = response.data.match(/innerHTML\s*=\s*"([^]+?)";/);
+            if (match && match[1]) {
+                html = match[1]
+                    .replace(/\\"/g, '"')
+                    .replace(/\\n/g, "")
+                    .replace(/\\t/g, "");
+            } else {
+                // Try direct HTML if pattern not found
+                html = response.data;
+            }
+        } else {
+            // If response is already an object, convert to string
+            html = JSON.stringify(response.data);
+        }
+
+        if (!html || html.trim() === '') {
+            return res.reply({
+                success: false,
+                error: "Empty response",
+                message: "No content received from Instagram download service"
+            }, { code: 500 });
+        }
+
+        const $ = cheerio.load(html);
+        const links = $(".download-items__btn a").map((_, el) => $(el).attr("href")).get();
+
+        if (!links || links.length === 0) {
+            // Try alternative selectors
+            const altLinks = $("a[href*='.mp4'], a[href*='.jpg'], a[href*='.png'], a[href*='.jpeg']").map((_, el) => $(el).attr("href")).get();
+            
+            if (altLinks.length === 0) {
+                return res.reply({
+                    success: false,
+                    error: "No media found",
+                    message: "Could not extract any media from this Instagram post"
+                }, { code: 404 });
+            }
+            
+            links.push(...altLinks);
+        }
+
+        // Filter and format media links
+        const media = links
+            .filter(link => link && typeof link === 'string')
+            .map(link => ({
+                url: link,
+                type: link.includes(".mp4") || link.includes(".mov") || link.includes(".avi") ? "video" : "image",
+                format: link.includes(".mp4") ? "mp4" : 
+                       link.includes(".mov") ? "mov" : 
+                       link.includes(".avi") ? "avi" :
+                       link.includes(".png") ? "png" : "jpg",
+                quality: link.includes("/hd/") || link.includes("_hd") ? "HD" : 
+                        link.includes("/sd/") || link.includes("_sd") ? "SD" : "Unknown"
+            }))
+            .filter(item => item.url.startsWith('http')); // Ensure valid URLs
+
+        if (media.length === 0) {
+            return res.reply({
+                success: false,
+                error: "No valid media found",
+                message: "Could not extract valid media URLs from this Instagram post"
+            }, { code: 404 });
+        }
+
+        // Extract additional metadata if available
+        const title = $("h1, h2, h3, .title, .caption").first().text().trim() || '';
+        const description = $("p, .description, .caption").first().text().trim() || '';
+        
+        // Group by type for better organization
+        const videos = media.filter(item => item.type === "video");
+        const images = media.filter(item => item.type === "image");
+
+        return res.reply({
+            success: true,
+            data: {
+                total: media.length,
+                videos: videos,
+                images: images,
+                all: media
+            },
+            metadata: {
+                title: title || null,
+                description: description || null,
+                source_url: url,
+                note: videos.length > 0 ? "Multiple quality options available" : "Image download ready"
+            },
+            message: `Found ${media.length} media items (${videos.length} videos, ${images.length} images)`
+        });
+
+    } catch (error) {
+        console.error("Instagram Download Error:", error.message);
+        
+        // Handle specific error cases
+        let errorMessage = "An error occurred while downloading from Instagram";
+        let errorCode = 500;
+        
+        if (error.code === 'ECONNABORTED') {
+            errorMessage = "Request timeout. The Instagram service is taking too long to respond.";
+            errorCode = 504;
+        } else if (error.response) {
+            // Server responded with error status
+            errorMessage = `Service error: ${error.response.status} ${error.response.statusText}`;
+            errorCode = error.response.status;
+        } else if (error.request) {
+            // No response received
+            errorMessage = "No response from Instagram download service";
+            errorCode = 502;
+        } else {
+            errorMessage = error.message || errorMessage;
+        }
+        
+        return res.reply({
+            success: false,
+            error: "Download failed",
+            message: errorMessage,
+            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        }, { code: errorCode });
     }
-    
-    // Validate Instagram URL pattern
-    const instagramPattern = /^https?:\/\/(www\.)?instagram\.com\/(p|reel|tv|stories)\/[a-zA-Z0-9_-]+\/?/i;
-    if (!instagramPattern.test(url)) {
-      return res.reply('Invalid Instagram URL. Supported: posts, reels, IGTV, stories.', { code: 400 });
-    }
-    
-    // Process Instagram download
-    const result = await instagram(url);
-    
-    // Handle errors from the scraper
-    if (result.error) {
-      return res.reply({
-        success: false,
-        error: result.error,
-        message: 'Failed to fetch Instagram content'
-      }, { code: 500 });
-    }
-    
-    // Check if we got any content
-    if (!result.video_url && (!result.images || result.images.length === 0)) {
-      return res.reply({
-        success: false,
-        error: 'no_content',
-        message: 'No media found in this Instagram post'
-      }, { code: 404 });
-    }
-    
-    // Prepare response based on content type
-    const response = {
-      success: true,
-      username: result.username || 'Unknown',
-      type: result.type,
-      caption: result.caption || '',
-      likes: result.likes || '0',
-      comments: result.comments || '0',
-      posted: result.time || 'Unknown',
-      metadata: {
-        status: result.status || 'unknown',
-        source_url: url
-      }
-    };
-    
-    // Add media URLs
-    if (result.type === 'video') {
-      response.video_url = result.video_url;
-      response.thumbnail = result.images && result.images.length > 0 ? result.images[0] : null;
-    } else if (result.type === 'image') {
-      response.images = result.images;
-      if (result.images && result.images.length === 1) {
-        response.image_url = result.images[0]; // Single image for convenience
-      }
-    }
-    
-    return res.reply(response);
-    
-  } catch (error) {
-    console.error('Instagram API Error:', error);
-    return res.reply({
-      success: false,
-      error: 'internal_error',
-      message: error.message || 'An error occurred while processing the request'
-    }, { code: 500 });
-  }
 };
 
 handler.alias = 'Instagram Downloader';
@@ -149,21 +165,36 @@ handler.category = 'Downloader';
 handler.method = 'GET';
 handler.status = 'ready';
 handler.params = {
-  url: { 
-    desc: 'Instagram post URL (post, reel, IGTV, or story)', 
-    required: true,
-    type: 'string',
-    example: 'https://www.instagram.com/p/Cxxxxxxxxxx/'
-  }
+    url: { 
+        desc: 'Instagram post URL (supports posts, reels, IGTV, stories)', 
+        required: true,
+        type: 'string',
+        example: 'https://www.instagram.com/p/Cxxxxxxxxxx/'
+    }
 };
 
 handler.notes = [
-  'Supports Instagram posts, reels, IGTV, and stories',
-  'Downloads both images and videos',
-  'Returns media URLs, caption, likes, and comments count',
-  'For carousel posts, returns multiple image URLs',
-  'Stories may have limited availability (24-hour expiration)',
-  'Rate limiting may apply from the source service'
+    'Supports all Instagram content types: posts, reels, IGTV, stories',
+    'Returns direct download links for media files',
+    'Automatic detection of video and image content',
+    'Includes quality indicators when available',
+    'May take a few seconds to process, especially for high-quality videos',
+    'Service powered by downloadgram.app'
+];
+
+handler.examples = [
+    {
+        description: 'Download a regular Instagram post',
+        url: '/downloader/Instagram?url=https://www.instagram.com/p/Cxxxxxxxxxx/'
+    },
+    {
+        description: 'Download an Instagram reel',
+        url: '/downloader/Instagram?url=https://www.instagram.com/reel/Cxxxxxxxxxx/'
+    },
+    {
+        description: 'Download IGTV video',
+        url: '/downloader/Instagram?url=https://www.instagram.com/tv/Cxxxxxxxxxx/'
+    }
 ];
 
 module.exports = handler;
