@@ -1,4 +1,4 @@
-const const = require('axios');
+const axios = require('axios');
 
 async function igee_deel(url) {
   try {
