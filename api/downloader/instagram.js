@@ -1,200 +1,164 @@
-const axios = require('axios');
-const cheerio = require('cheerio');
+const axios = require("axios");
+
+async function instagramDownloadRaw(url) {
+  try {
+    const res = await axios.post(
+      "https://thesocialcat.com/api/instagram-download",
+      {
+        url: url
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "User-Agent": "Mozilla/5.0",
+          "Accept": "application/json"
+        },
+        timeout: 15000
+      }
+    );
+
+    return res.data;
+  } catch (err) {
+    return err.response?.data || {
+      error: true,
+      message: err.message
+    };
+  }
+}
 
 let handler = async (res, req) => {
-    try {
-        const { url } = req.query;
-        
-        if (!url) {
-            return res.reply({
-                success: false,
-                error: "URL parameter is required",
-                message: "Please provide an Instagram URL"
-            }, { code: 400 });
-        }
-
-        // Validate Instagram URL
-        const instagramPattern = /^https?:\/\/(www\.)?instagram\.com\/(p|reel|tv|stories)\/[a-zA-Z0-9_-]+\/?/i;
-        if (!instagramPattern.test(url)) {
-            return res.reply({
-                success: false,
-                error: "Invalid Instagram URL",
-                message: "Supported formats: posts, reels, IGTV, stories"
-            }, { code: 400 });
-        }
-
-        const form = new URLSearchParams({ 
-            url: url + "&lang=en" 
-        });
-        
-        const headers = { 
-            "Content-Type": "application/x-www-form-urlencoded",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        };
-        
-        const response = await axios.post("https://api.downloadgram.app/media", form, { 
-            headers,
-            timeout: 30000
-        });
-
-        // Extract HTML from response
-        let html = "";
-        if (typeof response.data === 'string') {
-            const match = response.data.match(/innerHTML\s*=\s*"([^]+?)";/);
-            if (match && match[1]) {
-                html = match[1]
-                    .replace(/\\"/g, '"')
-                    .replace(/\\n/g, "")
-                    .replace(/\\t/g, "");
-            } else {
-                // Try direct HTML if pattern not found
-                html = response.data;
-            }
-        } else {
-            // If response is already an object, convert to string
-            html = JSON.stringify(response.data);
-        }
-
-        if (!html || html.trim() === '') {
-            return res.reply({
-                success: false,
-                error: "Empty response",
-                message: "No content received from Instagram download service"
-            }, { code: 500 });
-        }
-
-        const $ = cheerio.load(html);
-        const links = $(".download-items__btn a").map((_, el) => $(el).attr("href")).get();
-
-        if (!links || links.length === 0) {
-            // Try alternative selectors
-            const altLinks = $("a[href*='.mp4'], a[href*='.jpg'], a[href*='.png'], a[href*='.jpeg']").map((_, el) => $(el).attr("href")).get();
-            
-            if (altLinks.length === 0) {
-                return res.reply({
-                    success: false,
-                    error: "No media found",
-                    message: "Could not extract any media from this Instagram post"
-                }, { code: 404 });
-            }
-            
-            links.push(...altLinks);
-        }
-
-        // Filter and format media links
-        const media = links
-            .filter(link => link && typeof link === 'string')
-            .map(link => ({
-                url: link,
-                type: link.includes(".mp4") || link.includes(".mov") || link.includes(".avi") ? "video" : "image",
-                format: link.includes(".mp4") ? "mp4" : 
-                       link.includes(".mov") ? "mov" : 
-                       link.includes(".avi") ? "avi" :
-                       link.includes(".png") ? "png" : "jpg",
-                quality: link.includes("/hd/") || link.includes("_hd") ? "HD" : 
-                        link.includes("/sd/") || link.includes("_sd") ? "SD" : "Unknown"
-            }))
-            .filter(item => item.url.startsWith('http')); // Ensure valid URLs
-
-        if (media.length === 0) {
-            return res.reply({
-                success: false,
-                error: "No valid media found",
-                message: "Could not extract valid media URLs from this Instagram post"
-            }, { code: 404 });
-        }
-
-        // Extract additional metadata if available
-        const title = $("h1, h2, h3, .title, .caption").first().text().trim() || '';
-        const description = $("p, .description, .caption").first().text().trim() || '';
-        
-        // Group by type for better organization
-        const videos = media.filter(item => item.type === "video");
-        const images = media.filter(item => item.type === "image");
-
-        return res.reply({
-            success: true,
-            data: {
-                total: media.length,
-                videos: videos,
-                images: images,
-                all: media
-            },
-            metadata: {
-                title: title || null,
-                description: description || null,
-                source_url: url,
-                note: videos.length > 0 ? "Multiple quality options available" : "Image download ready"
-            },
-            message: `Found ${media.length} media items (${videos.length} videos, ${images.length} images)`
-        });
-
-    } catch (error) {
-        console.error("Instagram Download Error:", error.message);
-        
-        // Handle specific error cases
-        let errorMessage = "An error occurred while downloading from Instagram";
-        let errorCode = 500;
-        
-        if (error.code === 'ECONNABORTED') {
-            errorMessage = "Request timeout. The Instagram service is taking too long to respond.";
-            errorCode = 504;
-        } else if (error.response) {
-            // Server responded with error status
-            errorMessage = `Service error: ${error.response.status} ${error.response.statusText}`;
-            errorCode = error.response.status;
-        } else if (error.request) {
-            // No response received
-            errorMessage = "No response from Instagram download service";
-            errorCode = 502;
-        } else {
-            errorMessage = error.message || errorMessage;
-        }
-        
-        return res.reply({
-            success: false,
-            error: "Download failed",
-            message: errorMessage,
-            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
-        }, { code: errorCode });
+  try {
+    const { url } = req.query;
+    
+    // Validate URL
+    if (!url) {
+      return res.reply('URL parameter is required.', { code: 400 });
     }
+    
+    // Validate Instagram URL pattern
+    const instagramPattern = /^https?:\/\/(www\.)?instagram\.com\/(p|reel|tv|stories)\/[a-zA-Z0-9_-]+\/?/i;
+    if (!instagramPattern.test(url)) {
+      return res.reply('Invalid Instagram URL. Supported: posts, reels, IGTV, stories.', { code: 400 });
+    }
+    
+    // Process Instagram download using thesocialcat.com API
+    const result = await instagramDownloadRaw(url);
+    
+    // Handle API errors
+    if (result.error) {
+      return res.reply({
+        success: false,
+        error: result.error,
+        message: result.message || 'Failed to fetch Instagram content'
+      }, { code: 500 });
+    }
+    
+    // Handle cases where data might be in result.data or result.result
+    const data = result.data || result.result || result;
+    
+    // Check if we got any content
+    if (!data.media && !data.thumbnail && !data.download_url) {
+      return res.reply({
+        success: false,
+        error: 'no_content',
+        message: 'No media found in this Instagram post'
+      }, { code: 404 });
+    }
+    
+    // Format response based on thesocialcat.com API response structure
+    const response = {
+      success: true,
+      type: data.type || (data.media_type || 'unknown'),
+      caption: data.caption || data.description || '',
+      username: data.username || data.author || 'Unknown',
+      likes: data.likes || data.like_count || '0',
+      comments: data.comments || data.comment_count || '0',
+      posted: data.upload_date || data.timestamp || 'Unknown',
+      thumbnail: data.thumbnail || data.thumb_url || null,
+      media_urls: [],
+      metadata: {
+        source_url: url,
+        platform: 'Instagram',
+        service: 'thesocialcat.com'
+      }
+    };
+    
+    // Extract media URLs based on different response formats
+    if (data.download_url) {
+      response.media_urls.push(data.download_url);
+      if (data.type === 'video') {
+        response.video_url = data.download_url;
+      } else if (data.type === 'image') {
+        response.image_url = data.download_url;
+      }
+    }
+    
+    if (data.media && Array.isArray(data.media)) {
+      data.media.forEach(media => {
+        if (media.url) response.media_urls.push(media.url);
+      });
+    } else if (data.media && typeof data.media === 'string') {
+      response.media_urls.push(data.media);
+      response.image_url = data.media;
+    }
+    
+    // Handle multiple media (carousel posts)
+    if (data.media_urls && Array.isArray(data.media_urls)) {
+      response.media_urls = [...response.media_urls, ...data.media_urls];
+    }
+    
+    // For single media, add convenience properties
+    if (response.media_urls.length === 1) {
+      if (response.type === 'video') {
+        response.video_url = response.media_urls[0];
+      } else if (response.type === 'image' || response.type === 'photo') {
+        response.image_url = response.media_urls[0];
+      }
+    }
+    
+    // Extract dimensions if available
+    if (data.dimensions) {
+      response.dimensions = data.dimensions;
+    } else if (data.width && data.height) {
+      response.dimensions = {
+        width: data.width,
+        height: data.height
+      };
+    }
+    
+    return res.reply(response);
+    
+  } catch (error) {
+    console.error('Instagram API Error:', error);
+    return res.reply({
+      success: false,
+      error: 'internal_error',
+      message: error.message || 'An error occurred while processing the request'
+    }, { code: 500 });
+  }
 };
 
 handler.alias = 'Instagram Downloader';
 handler.category = 'Downloader';
 handler.method = 'GET';
-handler.status = 'error';
+handler.status = 'ready';
 handler.params = {
-    url: { 
-        desc: 'Instagram post URL (supports posts, reels, IGTV, stories)', 
-        required: true,
-        type: 'string',
-        example: 'https://www.instagram.com/p/Cxxxxxxxxxx/'
-    }
+  url: { 
+    desc: 'Instagram post URL (post, reel, IGTV, or story)', 
+    required: true,
+    type: 'string',
+    example: 'https://www.instagram.com/p/Cxxxxxxxxxx/'
+  }
 };
 
 handler.notes = [
-    'Supports all Instagram content types: posts, reels, IGTV, stories',
-    'Returns direct download links for media files',
-    'Automatic detection of video and image content',
-    'Includes quality indicators when available',
-    'May take a few seconds to process, especially for high-quality videos',
-    'Service powered by downloadgram.app'
-];
-
-handler.examples = [
-    {
-        description: 'Download a regular Instagram post',
-        url: '/downloader/Instagram?url=https://www.instagram.com/p/Cxxxxxxxxxx/'
-    },
-    {
-        description: 'Download an Instagram reel',
-        url: '/downloader/Instagram?url=https://www.instagram.com/reel/Cxxxxxxxxxx/'
-    },
-    {
-        description: 'Download IGTV video',
-        url: '/downloader/Instagram?url=https://www.instagram.com/tv/Cxxxxxxxxxx/'
-    }
+  'Supports Instagram posts, reels, IGTV, and stories',
+  'Uses thesocialcat.com API for reliable downloading',
+  'Returns media URLs, caption, likes, and comments count',
+  'For carousel posts, returns multiple image URLs',
+  'Stories may have limited availability (24-hour expiration)',
+  'Includes thumbnail preview when available',
+  '15-second timeout for API requests'
 ];
 
 module.exports = handler;
