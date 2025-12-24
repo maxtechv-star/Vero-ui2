@@ -89,7 +89,7 @@ let handler = async (res, req) => {
 
 handler.alias = 'YouTube Downloader';
 handler.category = 'Downloader';
-handler.status = 'ready';
+handler.status = 'error';
 handler.method = 'GET';
 handler.params = {
     url: { 
