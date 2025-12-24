@@ -1,6 +1,5 @@
 
 const ytdl = require('../../lib/scrape_file/downloader/ytd');
-
 let handler = async (res, req) => {
     try {
         const { url, quality, type = 'video' } = req.query;
@@ -8,78 +7,83 @@ let handler = async (res, req) => {
         // Validate URL
         if (!url) return res.reply('URL parameter is required.', { code: 400 });
         
-        if (!/youtube\.com|youtu\.be/.test(url)) {
-            return res.reply('Invalid YouTube URL. Please provide a valid YouTube video URL.', { code: 400 });
-        }
-        
         // Process the YouTube download
         const result = await YeteeDeel(url);
         
-        if (!result || !result.title) {
+        if (!result || !result.success) {
             return res.reply('Failed to fetch video information. Please check the URL and try again.', { code: 500 });
         }
         
-        // Filter results based on type and quality if provided
-        let downloadOptions = [];
-        if (type === 'video') {
-            downloadOptions = result.videos || [];
-        } else if (type === 'audio') {
-            downloadOptions = result.audios || [];
-        } else {
-            // Return all options if type not specified
-            downloadOptions = [
-                ...(result.videos || []),
-                ...(result.audios || [])
-            ];
-        }
-        
-        // Filter by quality if specified
-        if (quality && downloadOptions.length > 0) {
-            const filtered = downloadOptions.filter(option => 
-                option.quality.toLowerCase().includes(quality.toLowerCase())
-            );
-            if (filtered.length > 0) {
-                downloadOptions = filtered;
-            }
-        }
-        
-        // Format response
+        // Prepare response with all video info
         const response = {
             success: true,
             title: result.title,
             thumbnail: result.thumbnail,
-            downloadOptions: downloadOptions.map(option => ({
-                quality: option.quality,
-                url: option.url,
-                format: option.format,
-                type: option.format.includes('audio') ? 'audio' : 'video'
-            }))
+            duration: result.duration || 'Unknown',
+            channel: result.channel || 'Unknown',
+            sourceUrl: result.sourceUrl || url
         };
         
-        // Add note if quality was specified but not found
-        if (quality && response.downloadOptions.length === 0) {
-            response.note = `Quality "${quality}" not found. Showing all available options.`;
-            response.downloadOptions = [
-                ...(result.videos || []).map(v => ({...v, type: 'video'})),
-                ...(result.audios || []).map(a => ({...a, type: 'audio'}))
-            ];
+        // Filter options based on type
+        let availableOptions = [];
+        if (type === 'video' || type === 'all') {
+            availableOptions = [...availableOptions, ...(result.videos || [])];
+        }
+        if (type === 'audio' || type === 'all') {
+            availableOptions = [...availableOptions, ...(result.audios || [])];
         }
         
-        // If no download options found
+        // Filter by quality if specified
+        let filteredOptions = availableOptions;
+        if (quality && availableOptions.length > 0) {
+            filteredOptions = availableOptions.filter(option => 
+                option.quality.toLowerCase().includes(quality.toLowerCase())
+            );
+            
+            // If no match found with quality filter, show all options with a note
+            if (filteredOptions.length === 0) {
+                response.note = `No options found matching "${quality}". Showing all available options.`;
+                filteredOptions = availableOptions;
+            }
+        }
+        
+        response.downloadOptions = filteredOptions.map(option => ({
+            quality: option.quality,
+            url: option.url,
+            format: option.format,
+            type: option.format === 'mp3' ? 'audio' : 'video'
+        }));
+        
+        // Add count information
+        response.videoCount = (result.videos || []).length;
+        response.audioCount = (result.audios || []).length;
+        response.filteredCount = filteredOptions.length;
+        
+        // Add service note if present
+        if (result.note) {
+            response.serviceNote = result.note;
+        }
+        
+        // If no download options available
         if (response.downloadOptions.length === 0) {
-            response.note = 'No download options available for this video.';
+            response.note = 'No download options available for this video. It might be private, age-restricted, or unavailable for download.';
         }
         
         res.reply(response);
         
     } catch (error) {
         console.error('YouTube Download Error:', error.message);
-        res.reply(
-            error.message.includes('timeout') 
-                ? 'Request timeout. Please try again.' 
-                : 'Failed to fetch video information. Please check the URL and try again.',
-            { code: 500 }
-        );
+        
+        let errorMessage = 'Failed to fetch video information. ';
+        if (error.message.includes('Invalid YouTube URL')) {
+            errorMessage = 'Invalid YouTube URL format. Please provide a valid YouTube video URL.';
+        } else if (error.message.includes('No download options')) {
+            errorMessage = error.message;
+        } else if (error.message.includes('timeout')) {
+            errorMessage = 'Request timeout. The service might be busy. Please try again.';
+        }
+        
+        res.reply(errorMessage, { code: 500 });
     }
 };
 
@@ -109,12 +113,12 @@ handler.params = {
     }
 };
 handler.notes = [
-    'Supports YouTube videos, shorts, and embedded links',
+    'Uses yt-search for reliable video information',
     'Returns multiple quality options for both video and audio',
     'Video formats: MP4, WebM',
-    'Audio formats: M4A, WebM',
-    'Thumbnail included in response',
-    'Use quality parameter to filter specific resolutions'
+    'Audio formats: MP3, M4A, WebM',
+    'Includes video thumbnail, duration, and channel info',
+    'Some download links might be placeholders requiring service integration'
 ];
 
 module.exports = handler;
