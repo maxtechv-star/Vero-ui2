@@ -2,75 +2,44 @@ const YeteeDeel = require('../../lib/scrape_file/downloader/ytd');
 
 let handler = async (res, req) => {
     try {
-        const { url, quality, type = 'video' } = req.query;
+        const { url, quality, type } = req.query;
         
         // Validate URL
         if (!url) return res.reply('URL parameter is required.', { code: 400 });
         
+        if (!/youtube\.com|youtu\.be/.test(url)) {
+            return res.reply('Invalid YouTube URL. Please provide a valid YouTube video URL.', { code: 400 });
+        }
+        
+        // Determine type based on quality or explicit parameter
+        let downloadType = type;
+        if (!downloadType) {
+            if (quality && (quality.includes('mp3') || quality === '128')) {
+                downloadType = 'audio';
+            } else {
+                downloadType = 'video';
+            }
+        }
+        
         // Process the YouTube download
-        const result = await YeteeDeel(url);
+        const result = await YeteeDeel(url, quality, downloadType);
         
         if (!result || !result.success) {
             return res.reply('Failed to fetch video information. Please check the URL and try again.', { code: 500 });
         }
         
-        // Prepare response with all video info
+        // Format response
         const response = {
             success: true,
             title: result.title,
             thumbnail: result.thumbnail,
-            duration: result.duration || 'Unknown',
-            channel: result.channel || 'Unknown',
-            views: result.views || 'Unknown',
-            sourceUrl: result.sourceUrl || url,
-            service: result.service || 'Multiple',
-            note: result.note || null
+            duration: result.duration,
+            downloadUrl: result.downloadUrl,
+            quality: result.quality,
+            type: result.type,
+            availableQualities: result.availableQualities,
+            note: `Download ${result.type} in ${result.quality} quality`
         };
-        
-        // Filter options based on type
-        let availableOptions = [];
-        if (type === 'video' || type === 'all') {
-            availableOptions = [...availableOptions, ...(result.videos || [])];
-        }
-        if (type === 'audio' || type === 'all') {
-            availableOptions = [...availableOptions, ...(result.audios || [])];
-        }
-        
-        // Filter by quality if specified
-        let filteredOptions = availableOptions;
-        if (quality && availableOptions.length > 0) {
-            filteredOptions = availableOptions.filter(option => 
-                option.quality.toLowerCase().includes(quality.toLowerCase()) ||
-                option.format.toLowerCase().includes(quality.toLowerCase())
-            );
-            
-            // If no match found with quality filter, show all options with a note
-            if (filteredOptions.length === 0) {
-                response.note = `No options found matching "${quality}". Showing all available options.`;
-                filteredOptions = availableOptions;
-            }
-        }
-        
-        response.downloadOptions = filteredOptions.map(option => ({
-            quality: option.quality,
-            url: option.url,
-            format: option.format,
-            type: option.format === 'mp3' ? 'audio' : 'video',
-            size: option.size || 'Unknown',
-            duration: option.duration || result.duration || 'Unknown',
-            service: option.service || result.service || 'Unknown',
-            note: option.note || null
-        }));
-        
-        // Add count information
-        response.videoCount = (result.videos || []).length;
-        response.audioCount = (result.audios || []).length;
-        response.filteredCount = filteredOptions.length;
-        
-        // If no download options available
-        if (response.downloadOptions.length === 0) {
-            response.note = 'No download options available for this video.';
-        }
         
         res.reply(response);
         
@@ -101,26 +70,25 @@ handler.params = {
         required: true,
         type: 'string'
     },
-    type: { 
-        desc: 'Content type to download', 
-        options: ['video', 'audio', 'all'],
+    quality: { 
+        desc: 'Video quality (144, 240, 360, 480, 720, 1080) or "128" for MP3 audio', 
+        example: '720',
         required: false,
-        default: 'video',
         type: 'string'
     },
-    quality: { 
-        desc: 'Quality filter (e.g., "720p", "1080p", "MP3", "mp4")', 
-        example: 'mp3',
+    type: { 
+        desc: 'Download type (video or audio)', 
+        options: ['video', 'audio'],
         required: false,
         type: 'string'
     }
 };
 handler.notes = [
-    'Uses multiple services including ytmp4.is, youconvert, and yt-search',
-    'Supports long videos (up to 24 hours)',
-    'MP4 videos use itag18 quality (360p/480p)',
-    'Returns direct download links with file size info',
-    'Includes video metadata (title, duration, channel, views)'
+    'Supports YouTube videos, shorts, and embedded links',
+    'Video qualities: 144p, 240p, 360p, 480p, 720p, 1080p',
+    'Audio quality: 128kbps MP3',
+    'Direct download links provided',
+    'Includes video thumbnail and duration'
 ];
 
 module.exports = handler;
