@@ -44,6 +44,7 @@ let handler = async (res, req) => {
 
 handler.alias = 'VEO 3 AI Video Generator';
 handler.category = 'AI';
+handler.status = 'error';
 handler.params = {
   prompt: {
     desc: 'Prompt deskripsi video',
