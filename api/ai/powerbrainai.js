@@ -13,6 +13,7 @@ let handler = async (res, req) => {
 
 handler.alias = 'Powerbrain AI';
 handler.category = 'AI';
+handler.status = 'error';
 handler.params = {
     text: { desc: 'Input text for generating response.', example: 'Hi! How are you?' }
 };
