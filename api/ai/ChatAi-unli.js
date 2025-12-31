@@ -45,6 +45,7 @@ let handler = async (res, req) => {
 };
 
 handler.alias = "Chat AI Unlimited";
+handler.status = 'error';
 handler.category = "AI";
 handler.params = {
   q: {
