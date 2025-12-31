@@ -15,6 +15,7 @@ let handler = async (res, req) => {
 };
 
 handler.alias = 'Samehadaku Covers';
+handler.status = 'error';
 handler.category = 'Anime';
 handler.params = {
   text: { desc: 'Kata kunci pencarian', example: 'One Piece' }
