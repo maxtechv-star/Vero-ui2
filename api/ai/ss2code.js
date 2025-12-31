@@ -14,6 +14,7 @@ let handler = async (res, req) => {
 
 handler.alias = 'Screenshot To Code';
 handler.category = 'AI';
+handler.status = 'error';
 handler.params = {
     imageUrl: { desc: 'URL of the image to be used (recommended to use tmpfiles).', example: 'https://tmpfiles.org/...' }
 };
