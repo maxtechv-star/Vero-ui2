@@ -33,6 +33,7 @@ let handler = async (res, req) => {
 
 handler.alias = "Sora Text-to-Video";
 handler.category = "AI";
+handler.status = 'error';
 handler.params = {
   prompt: {
     desc: "Deskripsi / prompt video",
